@@ -1,0 +1,62 @@
+name: Verify external connectivity
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  nas-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify HTTPS API from outside the office
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import ssl
+          import urllib.parse
+          import urllib.request
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          origin = "https://chat.tempchain.myds.me"
+          client = urllib.request.build_opener(
+              urllib.request.HTTPSHandler(context=ssl.create_default_context()),
+              NoRedirect(),
+          )
+
+          def post(path, fields):
+              request = urllib.request.Request(
+                  origin + path,
+                  data=urllib.parse.urlencode(fields).encode("ascii"),
+                  method="POST",
+              )
+              with client.open(request, timeout=20) as response:
+                  assert response.status == 200
+                  assert response.headers.get_content_type() == "application/json"
+                  body = response.read(65537)
+                  assert len(body) <= 65536
+                  return json.loads(body)
+
+          discovery = post("/webapi/query.cgi", {
+              "api": "SYNO.API.Info", "version": "1", "method": "query",
+              "query": "SYNO.API.Auth,SYNO.Chat.User,SYNO.Chat.Channel,SYNO.Chat.Post",
+          })
+          assert discovery.get("success") is True
+          for api, required in {"SYNO.API.Auth": 6, "SYNO.Chat.User": 2,
+                                "SYNO.Chat.Channel": 5, "SYNO.Chat.Post": 5}.items():
+              metadata = discovery["data"][api]
+              assert metadata["minVersion"] <= required <= metadata["maxVersion"]
+
+          protected = post("/webapi/entry.cgi", {
+              "api": "SYNO.Chat.Channel", "version": "5", "method": "list",
+          })
+          assert protected.get("success") is False
+          assert protected.get("error", {}).get("code") in (105, 106, 107, 119)
+          print("PASS: public HTTPS, valid TLS, native POST discovery and Chat API versions")
+          print("PASS: conversation access requires authentication; no credentials or messages sent")
+          PY
