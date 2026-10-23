@@ -4,7 +4,7 @@ TEMPCHAIN 전용 디자인의 Windows 네이티브 메신저 첫 릴리스입니
 
 ## 다운로드와 실행
 
-[최신 릴리스 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 다음 파일을 제공합니다. 저장소는 비공개이므로 접근 권한이 있는 GitHub 계정으로 로그인해야 합니다.
+GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.0.0/TempChainChat-Setup-1.0.0.exe)를 이용할 수 있습니다. [최신 릴리스 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 다음 파일을 제공합니다.
 
 - `TempChainChat-Setup-1.0.0.exe`: 현재 Windows 사용자용 설치 프로그램
 - `TempChainChat-1.0.0-win-x64.zip`: 전체 압축 해제 후 `TempChain.Chat.exe`로 실행하는 버전

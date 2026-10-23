@@ -4,7 +4,7 @@
 
 ## 실행
 
-[최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 설치 EXE 또는 ZIP을 받습니다. 비공개 저장소이므로 접근 권한이 있는 GitHub 계정으로 로그인해야 합니다.
+GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.0.0/TempChainChat-Setup-1.0.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
 - **설치 EXE:** `TempChainChat-Setup-1.0.0.exe`를 실행합니다. 현재 Windows 사용자용 프로그램과 바로가기를 만듭니다.
 - **ZIP:** `TempChainChat-1.0.0-win-x64.zip` 전체를 압축 해제한 뒤 `TempChain.Chat.exe`를 실행합니다.
