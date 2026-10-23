@@ -54,6 +54,15 @@ Var PayloadDeleteFailed
 
 Function .onInit
   SetShellVarContext current
+check_running_app:
+  ; Include hidden/tray windows, including a development or portable instance.
+  ; Never terminate the employee's running session from the installer.
+  FindWindow $0 "" "TempChain Chat"
+  StrCmp $0 "0" install_not_running
+  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "TempChain Chat이 실행 중입니다.$\r$\n$\r$\n알림 영역의 TempChain Chat에서 '종료'를 선택한 다음 다시 시도를 눌러 주세요.$\r$\n이전 개발용 또는 ZIP 버전이 실행 중인 경우에도 먼저 종료해야 합니다." /SD IDCANCEL IDRETRY check_running_app
+  SetErrorLevel 2
+  Abort
+install_not_running:
   ; No Directory page, and ignore /D overrides: only this fixed per-user path.
   StrCpy $INSTDIR "$LOCALAPPDATA\Programs\TempChainChat"
   IfFileExists "$INSTDIR\*.*" 0 install_path_ok
