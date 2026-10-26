@@ -75,9 +75,11 @@ public sealed class AppUpdateManager : IDisposable
             }
             Status = UpdateInstaller.IsInstalledApp ? "업데이트 준비됨" : "설치 버전에서 업데이트할 수 있습니다.";
         }
-        catch (OperationCanceledException) { Status = "업데이트 확인이 취소되었거나 응답 시간이 초과됐습니다."; }
-        catch (InvalidOperationException ex) { Status = ex.Message; }
-        catch (Exception) { Status = "업데이트를 확인하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요."; }
+        catch (Exception ex)
+        {
+            LatestVersionText = client.LatestVersion?.ToString(3) ?? LatestVersionText;
+            Status = UpdateFailureMessage.For(ex);
+        }
         finally { busy = false; Changed?.Invoke(); }
     }
 

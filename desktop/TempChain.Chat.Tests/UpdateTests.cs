@@ -20,6 +20,19 @@ internal static class UpdateTests
 
     internal static async Task RunAllAsync()
     {
+        Run("Update failures distinguish release packaging, network and local storage errors", () => {
+            Check(UpdateFailureMessage.For(new InvalidDataException()).Contains("배포 파일"));
+            Check(!UpdateFailureMessage.For(new InvalidDataException()).Contains("인터넷"));
+            Check(UpdateFailureMessage.For(new HttpRequestException()).Contains("연결"));
+            Check(UpdateFailureMessage.For(new UnauthorizedAccessException()).Contains("권한"));
+            Check(UpdateFailureMessage.For(new IOException()).Contains("디스크"));
+        });
+        await RunAsync("Missing installer keeps the published version for actionable error display", async () => {
+            var legacyFeed = Feed("v1.1.5").Replace("TChat-Setup-", "TempChainChat-Setup-");
+            using var client = new ReleaseUpdateClient(new Handler(_ => Json(legacyFeed)));
+            await ThrowsAsync<InvalidDataException>(() => client.CheckAsync(Current));
+            Equal(new Version(1,1,5), client.LatestVersion!);
+        });
         Run("Updater compares numeric versions and ignores equal, older and preview releases", () => {
             Check(ReleaseUpdateClient.ParseRelease(Feed("v1.1.10"), Current)!.Version > Current);
             Check(ReleaseUpdateClient.ParseRelease(Feed("v1.1.2"), Current) is null);

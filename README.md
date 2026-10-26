@@ -2,13 +2,14 @@
 
 TEMPCHAIN 사내 Windows 메신저입니다.
 
-[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.5/TChat-Setup-1.1.5.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.5/TChat-1.1.5-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.1.5)
+[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.6/TChat-Setup-1.1.6.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.6/TChat-1.1.6-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.1.6)
 
-## 1.1.5 변경
+## 1.1.6 변경
 
 - 사용자 목록에 이름과 이메일 표시
 - 이름·이메일로 사용자 검색
 - TChat 설치 파일 하나로 배포
+- 업데이트 배포 파일·연결·저장 오류를 구분하고 실패해도 최신 버전 표시
 
 ## 사용
 
@@ -31,9 +32,9 @@ Windows 11 x64에서 설치 EXE를 실행한 뒤 기존 NAS 계정으로 로그�
 ```powershell
 dotnet build desktop/TempChain.Chat/TempChain.Chat.csproj -c Release
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
-./desktop/scripts/Build-Desktop.ps1 -Version 1.1.5
+./desktop/scripts/Build-Desktop.ps1 -Version 1.1.6
 ```
 
-[Windows 앱·개발 안내](desktop/README.md) · [NAS 설정](docs/SETUP.md) · [1.1.5 릴리스 노트](docs/RELEASE-v1.1.5.md)
+[Windows 앱·개발 안내](desktop/README.md) · [NAS 설정](docs/SETUP.md) · [1.1.6 릴리스 노트](docs/RELEASE-v1.1.6.md)
 
 텍스트 대화·직원 목록·채팅방 관리·읽음 처리·트레이를 지원합니다. 암호화 대화·파일 전송·스레드는 미지원이며, 새 메시지는 3초 간격으로 조회합니다. 앱과 설치기는 코드 서명되지 않았습니다.

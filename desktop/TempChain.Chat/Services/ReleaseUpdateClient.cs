@@ -77,11 +77,10 @@ public sealed class ReleaseUpdateClient : IDisposable
             buffer.Write(bytes, 0, count);
         }
         var json = System.Text.Encoding.UTF8.GetString(buffer.ToArray());
-        var result = ParseRelease(json, current);
         using var parsed = JsonDocument.Parse(json);
         LatestVersion = !parsed.RootElement.GetProperty("draft").GetBoolean() && !parsed.RootElement.GetProperty("prerelease").GetBoolean()
             ? Version.Parse(parsed.RootElement.GetProperty("tag_name").GetString()![1..]) : null;
-        return result;
+        return ParseRelease(json, current);
     }
 
     public async Task<string> DownloadAsync(UpdateRelease release, string stagingRoot, IProgress<int>? progress = null, CancellationToken ct = default)
