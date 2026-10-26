@@ -2,10 +2,13 @@
 
 TEMPCHAIN 사내 Windows 메신저입니다.
 
-[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.4/TChat-Setup-1.2.4.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.4/TChat-1.2.4-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.2.4)
+[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.3.0/TChat-Setup-1.3.0.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.3.0/TChat-1.3.0-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.3.0)
 
-## 1.2.4 변경
+## 1.3.0 변경
 
+- ERP 그룹 계정만 TChat 로그인·사용 가능, 그룹 제외 시 접근 차단 및 목록 자동 갱신
+- ERP 원본 계정 설명·이메일을 1분마다 동기화해 오래된 Chat 프로필 보정
+- 잠금 화면 로고 가운데 배치 및 제목 제거
 - 사용자 설명의 `이름 | 직급`을 `이름 직급`으로 표시하고 아래에는 이메일 표시
 - 이름·이메일로 사용자 검색
 - TChat 설치 파일 하나로 배포
@@ -34,11 +37,11 @@ Windows 11 x64에서 설치 EXE를 실행한 뒤 기존 ERP 계정으로 로그�
 ```powershell
 dotnet build desktop/TempChain.Chat/TempChain.Chat.csproj -c Release
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
-./desktop/scripts/Build-Desktop.ps1 -Version 1.2.4
+./desktop/scripts/Build-Desktop.ps1 -Version 1.3.0
 ```
 
-[Windows 앱·개발 안내](desktop/README.md) · [서버 설정](docs/SETUP.md) · [1.2.4 릴리스 노트](docs/RELEASE-v1.2.4.md)
+[Windows 앱·개발 안내](desktop/README.md) · [서버 설정](docs/SETUP.md) · [1.3.0 릴리스 노트](docs/RELEASE-v1.3.0.md)
 
-최초 1회 ERP 계정 로그인 후 앱 잠금 암호(숫자 4자리·6자리 또는 문자 포함 6자 이상)를 설정합니다. 이후에는 잠금 암호로 열고 ERP 계정 로그인은 유지합니다. 설정에서 자동 잠금 시간(기본 5분, 1~60분)과 암호를 변경할 수 있습니다. 명시적으로 로그아웃하거나 ERP 계정 비밀번호가 변경된 경우에는 다시 로그인해야 합니다.
+최초 1회 ERP 계정 로그인 후 앱 잠금 암호(숫자 4자리·6자리 또는 문자 포함 6자 이상)를 설정합니다. 이후에는 잠금 암호로 열고 ERP 계정 로그인은 유지합니다. 설정에서 자동 잠금 시간(기본 5분, 1~60분)과 암호를 변경할 수 있습니다. 명시적으로 로그아웃하거나 ERP 계정 비밀번호가 변경된 경우에는 다시 로그인해야 합니다. ERP 그룹에서 제외되면 사용 권한이 종료됩니다.
 
 텍스트 대화·직원 목록·채팅방 관리·읽음 처리·트레이를 지원합니다. 암호화 대화·파일 전송·스레드는 미지원이며, 새 메시지는 3초 간격으로 조회합니다. 앱과 설치기는 코드 서명되지 않았습니다.

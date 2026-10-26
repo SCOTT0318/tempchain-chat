@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     private long? messagesChannelId;
     private int sessionGeneration;
     private bool directoryUpdating;
+    private long lastDirectoryRefresh;
     private readonly HashSet<long> seenMessageIds = new();
     private readonly Dictionary<long, long> displayedMessageAt = new();
     private readonly Dictionary<long, long> readMessageAt = new();
@@ -144,6 +145,8 @@ public partial class MainWindow : Window
             if (generation != sessionGeneration || cancellation.IsCancellationRequested) return;
             var user = candidate.CurrentUser ?? throw new InvalidOperationException();
             client = candidate;
+            candidate.AccessRestricted += code => OnServerAccessRestriction(candidate, code);
+            directoryAccessBlocked = false;
             sessionRecoveryRejected = false; nextSessionRecovery = 0;
             settings = store.Load();
             if (storedUser is null)
@@ -163,7 +166,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             if (ReferenceEquals(client, candidate)) client = null;
-            if (storedUser is not null && ex is SynologyApiException { Code: 400 or 401 or 403 or 404 or 407 or 408 or 409 })
+            if (storedUser is not null && ex is SynologyApiException { Code: 400 or 401 or 403 or 404 or 407 or 408 or 409 or 460 })
                 sessionRecoveryRejected = true;
             LoginErrorText.Text = FriendlyError(ex);
         }
@@ -204,16 +207,19 @@ public partial class MainWindow : Window
             if (waitForGate) { await refreshGate.WaitAsync(token); entered = true; }
             else entered = await refreshGate.WaitAsync(0, token);
             if (!entered || active != client || generation != sessionGeneration) return;
-            var conversations = await active.GetConversationsAsync(token);
-            if (active != client || generation != sessionGeneration) return;
-            if (refreshDirectory || Contacts.Count == 0)
+            if (refreshDirectory || Contacts.Count == 0 || Environment.TickCount64 - lastDirectoryRefresh >= 30000)
             {
                 var users = await active.GetUsersAsync(token);
                 if (active != client || generation != sessionGeneration) return;
                 Contacts.Clear();
                 foreach (var user in users.Where(user => user.IsActive).OrderBy(DisplayName))
                     Contacts.Add(new ContactItem(user, user.Id == active.CurrentUser?.Id));
+                lastDirectoryRefresh = Environment.TickCount64;
+                if (active.CurrentUser is { } current)
+                { MyNameText.Text = DisplayName(current); MyInitialText.Text = Initial(DisplayName(current)); }
             }
+            var conversations = await active.GetConversationsAsync(token);
+            if (active != client || generation != sessionGeneration) return;
             var notifications = notificationTracker.Observe(active.NotificationConversations);
             ApplyConversations(conversations);
             var incoming = new List<(ChatConversation Room, string Sender)>();

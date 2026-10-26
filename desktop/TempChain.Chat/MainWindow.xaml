@@ -77,7 +77,7 @@
       </Border.Resources>
       <Border Background="White" CornerRadius="20" Padding="34" Width="430" HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="#D8E3EF" BorderThickness="1">
         <StackPanel>
-          <Image Source="Assets/TempChainLogo.png" Width="180" HorizontalAlignment="Left" Margin="0,0,0,28"/>
+          <Image x:Name="LockLogo" Source="Assets/TempChainLogo.png" Width="180" HorizontalAlignment="Center" Margin="0,0,0,20"/>
           <TextBlock x:Name="LockHeading" FontSize="24" FontWeight="SemiBold"/>
           <StackPanel x:Name="LockModePanel" Margin="0,20,0,18"><TextBlock Text="암호 방식" Margin="0,0,0,10"/><UniformGrid Columns="3"><RadioButton x:Name="Pin4Option" Content="4자리로 하기" GroupName="LockMode" Checked="LockMode_Changed"/><RadioButton x:Name="Pin6Option" Content="6자리로 하기" GroupName="LockMode" Checked="LockMode_Changed"/><RadioButton x:Name="TextPasswordOption" Content="문자 포함" GroupName="LockMode" Checked="LockMode_Changed"/></UniformGrid></StackPanel><TextBlock x:Name="LockPasswordLabel" Text="잠금 암호" Margin="0,12,0,10"/>
           <Grid Margin="0,20,0,0"><local:PinInput x:Name="LockPinInput" KeyDown="LockPassword_KeyDown"/>

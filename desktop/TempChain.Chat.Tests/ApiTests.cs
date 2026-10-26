@@ -69,6 +69,28 @@ internal static class ApiTests
             Equal("", users.Single(user => user.Id == 22).Email);
             handler.AssertComplete();
         });
+        foreach (var code in new[] { 460, 461 })
+            await RunAsync("ERP access restrictions are distinct from session expiration: " + code, async () =>
+            {
+                var handler = LoginHandler().Expect("SYNO.Chat.User", "list", new { success = false, error = new { code } });
+                using var client = new SynologyChatClient(Server, handler);
+                await client.LoginAsync("park", Password);
+                var restriction = 0; client.AccessRestricted += value => restriction = value;
+                var error = await ThrowsAsync<SynologyApiException>(() => client.GetUsersAsync());
+                Equal(code, restriction); Equal(code, error.Code);
+                if (code == 460) Check(error.Message.Contains("ERP 그룹"));
+                handler.AssertComplete();
+            });
+        await RunAsync("Directory refresh updates the signed-in profile as well as contacts", async () =>
+        {
+            var handler = LoginHandler().Expect("SYNO.Chat.User", "list", new { success = true, data = new { users = new[] {
+                new { user_id = 7, username = "p.park", nickname = "old-id", description = "박범준 | 사원", email = "park@example.test" }
+            } } });
+            using var client = new SynologyChatClient(Server, handler);
+            await client.LoginAsync("park", Password); await client.GetUsersAsync();
+            Equal("박범준 사원", client.CurrentUser!.DisplayName); Equal("park@example.test", client.CurrentUser.Email);
+            handler.AssertComplete();
+        });
         await RunAsync("Messages normalize long IDs, timestamps, sender names and attachments", async () =>
         {
             var handler = LoginHandler().Expect("SYNO.Chat.Channel", "list", Channels())

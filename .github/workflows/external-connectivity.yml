@@ -57,6 +57,16 @@ jobs:
           })
           assert protected.get("success") is False
           assert protected.get("error", {}).get("code") in (105, 106, 107, 119)
+          with client.open(origin + "/healthz", timeout=20) as response:
+              health = json.loads(response.read(4096))
+              assert response.status == 200 and health.get("ok") is True
+              assert 0 <= health["ageSeconds"] <= 180 and health["members"] > 0
+          rejected = post("/webapi/auth.cgi", {
+              "api": "SYNO.API.Auth", "version": "6", "method": "login",
+              "account": "tchat-external-check-not-an-account", "passwd": "not-a-credential",
+          })
+          assert rejected.get("success") is False and rejected.get("error", {}).get("code") == 460
           print("PASS: public HTTPS, valid TLS, native POST discovery and Chat API versions")
           print("PASS: conversation access requires authentication; no credentials or messages sent")
+          print("PASS: ERP directory is fresh and non-members cannot log in")
           PY

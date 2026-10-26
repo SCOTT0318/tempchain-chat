@@ -33,6 +33,7 @@ public sealed partial class SynologyChatClient : IDisposable
     private string? defaultNotificationPreference;
     private bool disposed;
     public ChatUser? CurrentUser { get; private set; }
+    public event Action<int>? AccessRestricted;
     public IReadOnlyList<ChatConversation> NotificationConversations => conversations.Values.ToArray();
 
     public SynologyChatClient(Uri serverUri, HttpMessageHandler? handler = null)
@@ -129,6 +130,7 @@ public sealed partial class SynologyChatClient : IDisposable
                 inviteableUsers.Add(id);
             }
         }
+        if (CurrentUser is { } current && users.TryGetValue(current.Id, out var refreshed)) CurrentUser = refreshed;
         return result;
     }
 
@@ -377,7 +379,10 @@ public sealed partial class SynologyChatClient : IDisposable
             {
                 var code = envelope.ValueKind == JsonValueKind.Object && envelope.TryGetProperty("error", out var error) ?
                     (int)ReadLong(error, "code", 0) : 0;
-                var message = api == "SYNO.API.Auth" && method == "login" && code is 403 or 404 ?
+                if (code is 460 or 461) AccessRestricted?.Invoke(code);
+                var message = code == 460 ? "ERP 그룹에 포함된 계정만 사용할 수 있습니다." :
+                    code == 461 ? "계정 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." :
+                    api == "SYNO.API.Auth" && method == "login" && code is 403 or 404 ?
                     "이 계정으로 로그인할 수 없습니다. 관리자에게 계정 설정을 문의해 주세요." :
                     api.StartsWith("SYNO.Chat.", StringComparison.Ordinal) ? code switch
                     {

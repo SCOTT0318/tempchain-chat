@@ -1,0 +1,156 @@
+import { createServer, request as httpRequest } from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+
+const groupDenied = 460;
+const directoryUnavailable = 461;
+const keyFor = value => createHash('sha256').update(value).digest('hex');
+const accountFor = user => user?.username || user?.user_name || user?.name || '';
+
+export function directoryMembers(snapshot, now = Date.now()) {
+  if (snapshot?.version !== 1 || !Number.isSafeInteger(snapshot.generatedAt) ||
+      snapshot.generatedAt > now + 30000 || now - snapshot.generatedAt > 180000 || !Array.isArray(snapshot.users))
+    throw new Error('directory_unavailable');
+  const members = new Map();
+  for (const user of snapshot.users) {
+    if (typeof user.account !== 'string' || !Array.isArray(user.groups) ||
+        typeof user.description !== 'string' || typeof user.email !== 'string') throw new Error('directory_unavailable');
+    if (user.groups.includes('erp')) members.set(user.account.toLowerCase(), user);
+  }
+  return members;
+}
+
+export function enrichUser(user, members) {
+  const identity = members.get(accountFor(user).toLowerCase());
+  if (!identity) return undefined;
+  return { ...user, description: identity.description, email: identity.email || user.email || user.user_props?.email || '',
+    user_props: { ...user.user_props, description: identity.description,
+      email: identity.email || user.email || user.user_props?.email || '' } };
+}
+
+export function createAccessGateway({ snapshotPath = '/directory/identity.json', upstream = 'http://192.168.0.7:3000',
+  readDirectory = async () => {
+    if ((await stat(snapshotPath)).size > 2097152) throw new Error('directory_unavailable');
+    return JSON.parse(await readFile(snapshotPath, 'utf8'));
+  }, forward = proxyRequest, now = Date.now } = {}) {
+  const sessions = new Map();
+  const trimSessions = () => {
+    if (sessions.size > 10000) for (const [key, value] of sessions) if (now() - value.seen > 3600000) sessions.delete(key);
+    if (sessions.size > 10000) sessions.clear();
+  };
+  function remember(sid, account) { trimSessions(); sessions.set(keyFor(sid), { account, seen: now() }); }
+  return createServer(async (request, response) => {
+    function send(body, status = 200) {
+      response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+      response.end(JSON.stringify(body));
+    }
+    const error = code => send({ success: false, error: { code } });
+    try {
+      const url = new URL(request.url, 'http://gateway');
+      if (url.pathname === '/healthz') {
+        try {
+          const snapshot = await readDirectory();
+          const members = directoryMembers(snapshot, now());
+          return send({ ok: true, members: members.size, ageSeconds: Math.floor((now() - snapshot.generatedAt) / 1000) });
+        } catch { return send({ ok: false }, 503); }
+      }
+      const chunks = []; let size = 0;
+      for await (const chunk of request) { size += chunk.length; if (size > 2097152) return error(400); chunks.push(chunk); }
+      const body = Buffer.concat(chunks);
+      // This public host serves the native TChat API only, never DSM pages or encoded alternate routes.
+      if (request.method !== 'POST' || !/^\/webapi\/[A-Za-z0-9_.-]+\.cgi$/.test(url.pathname)) return error(104);
+      const fields = new URLSearchParams(body.toString('utf8'));
+      const api = fields.get('api'); const method = fields.get('method');
+      const call = () => forward({ upstream, path: request.url, method: 'POST', headers: request.headers, body });
+      const resolveUser = async (user, sid) => {
+        const id = user?.user_id ?? user?.id;
+        if (!id || !sid) return undefined;
+        const probe = new URLSearchParams({ api: 'SYNO.Chat.User', method: 'list', version: '2', _sid: sid });
+        if (fields.get('SynoToken')) probe.set('SynoToken', fields.get('SynoToken'));
+        const result = await forward({ upstream, path: '/webapi/entry.cgi', method: 'POST',
+          headers: { ...request.headers, 'content-type': 'application/x-www-form-urlencoded' }, body: Buffer.from(probe.toString()) });
+        const json = JSON.parse(result.body.toString('utf8'));
+        const match = json.success && json.data?.users?.find(candidate => String(candidate.user_id ?? candidate.id) === String(id));
+        return match && accountFor(match) ? { ...user, username: accountFor(match) } : undefined;
+      };
+      if (api === 'SYNO.API.Info' && method === 'query') {
+        const result = await call(); response.writeHead(result.status, result.headers); return response.end(result.body);
+      }
+      if (api !== 'SYNO.API.Auth' && !api?.startsWith('SYNO.Chat.')) return error(104);
+      const sid = fields.get('_sid') || request.headers.cookie?.split(';').map(value => value.trim()).find(value => value.startsWith('id='))?.slice(3);
+      if (api === 'SYNO.API.Auth' && method === 'logout') {
+        if (sid) sessions.delete(keyFor(sid));
+        const result = await call(); response.writeHead(result.status, result.headers); return response.end(result.body);
+      }
+      let members;
+      try { members = directoryMembers(await readDirectory(), now()); } catch { return error(directoryUnavailable); }
+      if (api === 'SYNO.API.Auth' && method === 'login') {
+        const account = fields.get('account') || '';
+        if (!members.has(account.toLowerCase())) return error(groupDenied);
+        const result = await call();
+        const json = JSON.parse(result.body.toString('utf8'));
+        if (json.success && typeof json.data?.sid === 'string') remember(json.data.sid, account);
+        response.writeHead(result.status, result.headers); return response.end(result.body);
+      }
+      if (api === 'SYNO.API.Auth') return error(104);
+      if (!sid) return error(119);
+      let session = sessions.get(keyFor(sid));
+      if (!session) {
+        // A gateway restart never trusts caller-supplied account names. Revalidate the session with Chat.
+        const probe = new URLSearchParams({ api: 'SYNO.Chat.User', method: 'login', version: '2', _sid: sid });
+        if (fields.get('SynoToken')) probe.set('SynoToken', fields.get('SynoToken'));
+        const result = await forward({ upstream, path: '/webapi/entry.cgi', method: 'POST',
+          headers: { ...request.headers, 'content-type': 'application/x-www-form-urlencoded' }, body: Buffer.from(probe.toString()) });
+        const json = JSON.parse(result.body.toString('utf8'));
+        if (!json.success) return error(119);
+        const user = await resolveUser(json.data?.user, sid);
+        if (!user) return error(119);
+        const account = accountFor(user);
+        if (!members.has(account.toLowerCase())) return error(groupDenied);
+        remember(sid, account); session = sessions.get(keyFor(sid));
+      }
+      if (!members.has(session.account.toLowerCase())) { sessions.delete(keyFor(sid)); return error(groupDenied); }
+      session.seen = now();
+      const result = await call();
+      if (api === 'SYNO.Chat.User' && (method === 'list' || method === 'login')) {
+        const json = JSON.parse(result.body.toString('utf8'));
+        if (json.success && method === 'list' && Array.isArray(json.data?.users))
+          json.data.users = json.data.users.map(user => enrichUser(user, members)).filter(Boolean);
+        if (json.success && method === 'login' && json.data?.user) {
+          const resolved = await resolveUser(json.data.user, sid);
+          const user = resolved && enrichUser(resolved, members);
+          if (!user || accountFor(user).toLowerCase() !== session.account.toLowerCase()) return error(groupDenied);
+          json.data.user = user;
+        }
+        return send(json, result.status);
+      }
+      response.writeHead(result.status, result.headers); response.end(result.body);
+    } catch { if (!response.headersSent) error(directoryUnavailable); else response.destroy(); }
+  });
+}
+
+export async function proxyRequest({ upstream, path, method, headers, body }) {
+  return new Promise((resolve, reject) => {
+    const destination = new URL(path, upstream);
+    if (destination.origin !== new URL(upstream).origin) return reject(new Error('invalid_upstream'));
+    const outgoing = { ...headers, 'content-length': String(body.length), 'accept-encoding': 'identity' };
+    delete outgoing.connection; delete outgoing['transfer-encoding'];
+    const request = httpRequest(destination, { method, headers: outgoing }, response => {
+      const chunks = []; let size = 0;
+      response.on('data', chunk => { size += chunk.length; if (size > 8388608) { response.destroy(); reject(new Error('too_large')); } else chunks.push(chunk); });
+      response.on('error', reject);
+      response.on('end', () => {
+        const clean = { ...response.headers }; delete clean['transfer-encoding']; delete clean.connection; delete clean['content-length'];
+        resolve({ status: response.statusCode, headers: clean, body: Buffer.concat(chunks) });
+      });
+    });
+    request.setTimeout(15000, () => request.destroy(new Error('timeout')));
+    request.on('error', reject); request.end(body);
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  createAccessGateway({ snapshotPath: process.env.DIRECTORY_PATH || '/directory/identity.json',
+    upstream: process.env.CHAT_UPSTREAM || 'http://192.168.0.7:3000' }).listen(8080, '0.0.0.0');
+}

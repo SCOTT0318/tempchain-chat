@@ -105,6 +105,12 @@ class Program {
   Render(main,Path.Combine(root,"main-navigation-small.png"));
   ((Button)main.FindName("LockRailButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("rail lock button did not lock app");
+  if(((Image)main.FindName("LockLogo")).HorizontalAlignment!=HorizontalAlignment.Center || ((TextBlock)main.FindName("LockHeading")).Visibility!=Visibility.Collapsed) throw new Exception("unlock requires centered logo without heading");
+  var active=typeof(MainWindow).GetField("client",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(main)!;
+  Invoke(main,"OnServerAccessRestriction",active,461); WaitUnlock(main);
+  if(!new PersistentLoginStore(root).Exists || ((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("directory outage must lock while retaining login");
+  Invoke(main,"OnServerAccessRestriction",active,460); WaitUnlock(main);
+  if(new PersistentLoginStore(root).Exists || ((Grid)main.FindName("LoginView")).Visibility!=Visibility.Visible) throw new Exception("ERP revocation must remove saved login and close chat");
   main.Close(); app.Shutdown(); return 0;
  }
  static void Invoke(object target,string name,params object[] args)=>target.GetType().GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(target,args);

@@ -1,5 +1,7 @@
 # TempChain Chat의 NAS 설정 및 선택 연동 안내
 
+> 2026-10-26 TChat 운영 변경: 공개 TChat 프록시의 대상은 `http://127.0.0.1:8091`이며, ERP 그룹 검사와 원본 프로필 동기화를 적용했습니다. 아래의 users 그룹 허용·3000 직접 연결 내용은 초기 구축 이력입니다. 현재 TChat 구성은 [ERP 접근 검사 운영 안내](../server/README.md)를 우선합니다. 외부 주소 `https://chat.tempchain.myds.me`와 기존 ERP 프록시는 유지합니다.
+
 Windows 직원은 이 저장소의 자체 WPF 앱 **TempChain Chat**을 사용합니다. 설치·실행·설정은 [Windows 앱 안내](../desktop/README.md)를 따릅니다. 이 문서는 운영 담당자를 위한 NAS 권한·접속 경로와 선택 알림 연동 안내입니다. 서버 주소는 직원 화면에 표시하거나 직원별로 설정하지 않습니다.
 
 ## 1. 기존 환경과 확인 상태

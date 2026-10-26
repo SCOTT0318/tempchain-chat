@@ -18,6 +18,7 @@ public partial class MainWindow
     private long nextUnlockAttempt;
     private long nextSessionRecovery;
     private bool sessionRecoveryRejected;
+    private bool directoryAccessBlocked, accessRevocationPending;
     private string lockInputMode = "pin4";
     private readonly AppLockTimer lockTimer = new(Environment.TickCount64);
     private readonly DispatcherTimer securityTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -72,7 +73,8 @@ public partial class MainWindow
         notification?.Close(); notification = null;
         foreach (var window in OwnedWindows.Cast<Window>().ToArray()) window.Close();
         ChatView.Visibility = LoginView.Visibility = Visibility.Collapsed;
-        LockHeading.Text = setup ? "앱 잠금 암호 설정" : "TChat 잠금";
+        LockHeading.Text = setup ? "앱 잠금 암호 설정" : "";
+        LockHeading.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockPasswordLabel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockConfirmPanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockSubmitButton.Content = setup ? "암호 설정 및 시작" : "잠금 해제";
@@ -164,9 +166,15 @@ public partial class MainWindow
                 if (client is null) await SignInAsync(login.UserName, login.Password);
                 if (sessionRecoveryRejected)
                 {
+                    var reason = LoginErrorText.Text;
                     await SignOutAsync();
-                    LoginErrorText.Text = "ERP 계정 정보가 변경되어 다시 로그인이 필요합니다.";
+                    LoginErrorText.Text = string.IsNullOrWhiteSpace(reason) ? "ERP 계정 정보가 변경되어 다시 로그인이 필요합니다." : reason;
                     return;
+                }
+                if (directoryAccessBlocked && client is { } active)
+                {
+                    try { await active.GetUsersAsync(); directoryAccessBlocked = false; }
+                    catch (Exception ex) { LockErrorText.Text = FriendlyError(ex); return; }
                 }
                 if (client is not null) UnlockApp();
                 else LockErrorText.Text = LoginErrorText.Text;
@@ -187,6 +195,30 @@ public partial class MainWindow
         if (savedLogin is null || securityLocked) return;
         pendingLogin = (savedLogin.UserName, savedLogin.Password);
         ShowSecurityGate(true);
+    }
+
+    private void OnServerAccessRestriction(SynologyChatClient active, int code)
+    {
+        if (code == 461)
+        {
+            Dispatcher.BeginInvoke(() => {
+                if (!ReferenceEquals(client, active)) return;
+                directoryAccessBlocked = true; LockApp();
+                LockErrorText.Text = "계정 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            });
+            return;
+        }
+        if (accessRevocationPending) return;
+        accessRevocationPending = true;
+        Dispatcher.BeginInvoke(async () => {
+            try
+            {
+                if (!ReferenceEquals(client, active)) return;
+                await SignOutAsync();
+                LoginErrorText.Text = "ERP 그룹에 포함된 계정만 사용할 수 있습니다.";
+            }
+            finally { accessRevocationPending = false; }
+        });
     }
 
     private async Task RecoverSessionAsync(SynologyChatClient active, System.Threading.CancellationToken token)
