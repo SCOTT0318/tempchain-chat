@@ -37,7 +37,7 @@
         <Border Background="White" Width="43" Height="43" CornerRadius="12" VerticalAlignment="Center"><Image Source="Assets/TempChainSymbol.png" Margin="6" Stretch="Uniform"/></Border>
         <Button Grid.Row="1" ToolTip="대화 목록" AutomationProperties.Name="대화 목록" Click="Conversations_Click"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource RailButton}"><Style.Triggers><DataTrigger Binding="{Binding ElementName=ConversationsList, Path=Visibility}" Value="Visible"><Setter Property="Background" Value="#315E87"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#517A9E"/></DataTrigger></Style.Triggers></Style></Button.Style><StackPanel><TextBlock Text="&#xE8F2;" FontFamily="Segoe MDL2 Assets" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="대화" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/></StackPanel></Button>
         <Button Grid.Row="2" ToolTip="사내 연락처" AutomationProperties.Name="사내 연락처" Click="Contacts_Click"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource RailButton}"><Style.Triggers><DataTrigger Binding="{Binding ElementName=ContactsList, Path=Visibility}" Value="Visible"><Setter Property="Background" Value="#315E87"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#517A9E"/></DataTrigger></Style.Triggers></Style></Button.Style><StackPanel><TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="21" HorizontalAlignment="Center"/><TextBlock Text="연락처" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/></StackPanel></Button>
-        <Button Grid.Row="4" Style="{StaticResource RailButton}" ToolTip="설정 (Ctrl+,)" AutomationProperties.Name="설정" Click="Settings_Click"><StackPanel><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="설정" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/></StackPanel></Button><Button Grid.Row="5" Style="{StaticResource RailButton}" Content="나가기" ToolTip="로그아웃" Margin="7,5,7,20" Click="Logout_Click"/>
+        <Button Grid.Row="4" Style="{StaticResource RailButton}" ToolTip="설정 (Ctrl+,)" AutomationProperties.Name="설정" Click="Settings_Click"><StackPanel><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="19" HorizontalAlignment="Center"/><TextBlock Text="설정" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/></StackPanel></Button><Button Grid.Row="5" Style="{StaticResource RailButton}" Content="로그아웃" ToolTip="로그인 유지 해제" Margin="7,5,7,20" Click="Logout_Click"/>
       </Grid></Border>
       <Border Grid.Column="1" Background="#FCFDFE" BorderBrush="#E3EAF2" BorderThickness="0,0,1,0"><Grid>
         <Grid.RowDefinitions><RowDefinition Height="87"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="81"/></Grid.RowDefinitions>
@@ -65,5 +65,20 @@
         <TextBlock Grid.Row="4" x:Name="StatusText" Text="대화를 불러오는 중" FontSize="11" Foreground="#657B91" Margin="29,0,22,0" TextTrimming="CharacterEllipsis"/>
       </Grid>
     </Grid>
+    <Border x:Name="LockOverlay" Grid.RowSpan="2" Panel.ZIndex="100" Visibility="Collapsed" Background="#F4F8FC">
+      <Border Background="White" CornerRadius="20" Padding="34" Width="430" HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="#D8E3EF" BorderThickness="1">
+        <StackPanel>
+          <Image Source="Assets/TempChainLogo.png" Width="180" HorizontalAlignment="Left" Margin="0,0,0,28"/>
+          <TextBlock x:Name="LockHeading" FontSize="24" FontWeight="SemiBold"/>
+        <TextBlock x:Name="LockDescription" TextWrapping="Wrap" Foreground="#657B91" Margin="0,12,0,22"/>
+          <TextBlock Text="잠금 암호 (6~128자)" Margin="0,0,0,7"/>
+          <PasswordBox x:Name="AppLockPasswordBox" MaxLength="128" Padding="12" AutomationProperties.Name="앱 잠금 암호" KeyDown="LockPassword_KeyDown"/>
+          <StackPanel x:Name="LockConfirmPanel" Margin="0,16,0,0"><TextBlock Text="암호 확인" Margin="0,0,0,7"/><PasswordBox x:Name="AppLockConfirmBox" MaxLength="128" Padding="12" AutomationProperties.Name="앱 잠금 암호 확인" KeyDown="LockPassword_KeyDown"/></StackPanel>
+          <TextBlock x:Name="LockErrorText" TextWrapping="Wrap" Foreground="#AD3E2A" Margin="0,14,0,10"/>
+          <Button x:Name="LockSubmitButton" Content="잠금 해제" Style="{StaticResource PrimaryButton}" Click="Unlock_Click" Padding="15,12"/>
+          <Button Content="NAS 계정으로 다시 로그인" Click="ResetLogin_Click" Margin="0,12,0,0"/>
+        </StackPanel>
+      </Border>
+    </Border>
   </Grid>
 </Window>

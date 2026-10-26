@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.1.6',
+    [string]$Version = '1.2.0',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller
@@ -34,7 +34,7 @@ function Get-PayloadFiles {
     foreach ($file in $files) {
         $relative = [IO.Path]::GetRelativePath($Directory, $file.FullName)
         if ($relative -match '(^|[\\/])(WebView2|User Data)([\\/]|$)' -or
-            $file.Name -match '^(\.env($|\.)|settings\.json$|Microsoft\.Web\.WebView2\.|WebView2Loader\.)' -or
+            $file.Name -match '^(\.env($|\.)|settings\.json$|login\.dat($|\.)|Microsoft\.Web\.WebView2\.|WebView2Loader\.)' -or
             $file.Extension -in @('.pfx', '.p12')) {
             throw "배포할 수 없는 프로필·비밀값·WebView2 파일입니다: $relative"
         }

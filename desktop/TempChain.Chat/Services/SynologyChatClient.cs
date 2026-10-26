@@ -88,7 +88,7 @@ public sealed partial class SynologyChatClient : IDisposable
                 throw new SynologyApiException(0, "로그인한 Chat 사용자 정보를 확인하지 못했습니다.");
             var currentId = ReadLong(signedInUser, "user_id", "id");
             var signedInName = ReadString(signedInUser, "username", "user_name", "name");
-            var signedInDisplay = ReadProfileString(signedInUser, "nickname", "display_name", "displayName", "full_name", "real_name");
+            var signedInDisplay = ReadUserDisplayName(signedInUser);
             var employees = await GetUsersAsync(ct);
             CurrentUser = employees.FirstOrDefault(user => user.Id == currentId);
             if (CurrentUser is null && !string.IsNullOrWhiteSpace(signedInName))
@@ -115,7 +115,7 @@ public sealed partial class SynologyChatClient : IDisposable
             var id = ReadLong(item, "user_id", "id");
             var name = ReadString(item, "username", "user_name", "name");
             if (id <= 0 || string.IsNullOrWhiteSpace(name)) continue;
-            var display = ReadProfileString(item, "nickname", "display_name", "displayName", "full_name", "real_name");
+            var display = ReadUserDisplayName(item);
             var active = ReadBool(item, true, "is_active", "active", "is_enabled") &&
                 !ReadBool(item, false, "is_disabled") && !ReadBool(item, false, "deleted");
             var user = new ChatUser(id, name, string.IsNullOrWhiteSpace(display) ? name : display, active,
@@ -417,6 +417,15 @@ public sealed partial class SynologyChatClient : IDisposable
             if (source.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array)
                 return value.EnumerateArray().ToArray();
         return Array.Empty<JsonElement>();
+    }
+
+    private static string ReadUserDisplayName(JsonElement source)
+    {
+        var description = ReadProfileString(source, "description");
+        var parts = description.Split('|', StringSplitOptions.TrimEntries);
+        if (parts.Length == 2 && parts.All(part => !string.IsNullOrWhiteSpace(part)))
+            return string.Join(" ", parts);
+        return ReadProfileString(source, "nickname", "display_name", "displayName", "full_name", "real_name");
     }
 
     private static string ReadProfileString(JsonElement source, params string[] names)

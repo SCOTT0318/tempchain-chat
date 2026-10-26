@@ -40,7 +40,7 @@ internal static class Program
                     Equal(legacyJson, File.ReadAllText(store.SettingsPath));
                     store.Save(store.Load());
                     using var serialized = JsonDocument.Parse(File.ReadAllText(store.SettingsPath));
-                    Equal(5, serialized.RootElement.EnumerateObject().Count());
+                    Equal(6, serialized.RootElement.EnumerateObject().Count());
                     Check(!serialized.RootElement.TryGetProperty("ServerUrl", out _));
                     Check(serialized.RootElement.TryGetProperty("MinimizeToTray", out _));
                     Check(serialized.RootElement.TryGetProperty("StartWithWindows", out _));
@@ -63,6 +63,7 @@ internal static class Program
         await ApiTests.RunAllAsync();
         await RoomTests.RunAllAsync();
         NotificationTests.RunAll();
+        SecurityTests.RunAll();
         await UpdateTests.RunAllAsync();
         Console.WriteLine($"{_passed} passed, {_failed} failed");
         return _failed == 0 ? 0 : 1;

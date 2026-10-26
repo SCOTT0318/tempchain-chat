@@ -52,7 +52,7 @@ internal static class ApiTests
         await RunAsync("User profiles preserve names and nested emails without inventing missing values", async () =>
         {
             var handler = LoginHandler().Expect("SYNO.Chat.User", "list", new { success = true, data = new { users = new object[] {
-                new { user_id = 7, username = "p.park", nickname = "박범준", user_props = new { email = "park@example.test" } },
+                new { user_id = 7, username = "p.park", nickname = "박범준", user_props = new { email = "park@example.test", description = " 박범준 | 사원 " } },
                 new { user_id = OtherId, username = "hong", nickname = " ", display_name = "홍길동", email = "", user_props = new { email = "hong@example.test" } },
                 new { user_id = 21, username = "kim", nickname = "김직원", email = "kim@example.test" },
                 new { user_id = 22, username = "unconfigured" }
@@ -60,7 +60,7 @@ internal static class ApiTests
             using var client = new SynologyChatClient(Server, handler);
             await client.LoginAsync("park", Password);
             var users = await client.GetUsersAsync();
-            Equal("박범준", users.Single(user => user.Id == 7).DisplayName);
+            Equal("박범준 사원", users.Single(user => user.Id == 7).DisplayName);
             Equal("park@example.test", users.Single(user => user.Id == 7).Email);
             Equal("홍길동", users.Single(user => user.Id == OtherId).DisplayName);
             Equal("hong@example.test", users.Single(user => user.Id == OtherId).Email);

@@ -13,6 +13,8 @@ public partial class SettingsWindow : Window
     private readonly SettingsStore store;
     private NotificationWindow? preview;
     public AppSettings Result { get; private set; }
+    public bool ChangeLockPasswordRequested { get; private set; }
+    public bool LockRequested { get; private set; }
 
     public SettingsWindow(SettingsStore store, AppSettings current)
     {
@@ -24,11 +26,36 @@ public partial class SettingsWindow : Window
         AutoUpdateCheckBox.IsChecked = current.AutoUpdate;
         DurationBox.SelectedIndex = current.Normalize().NotificationDurationSeconds - 3;
         SenderBox.SelectedIndex = current.ShowNotificationSender ? 0 : 1;
+        AutoLockMinutesBox.Text = current.AutoLockMinutes.ToString(CultureInfo.InvariantCulture);
+        DurationBox.SelectionChanged += NotificationPreference_Changed;
+        SenderBox.SelectionChanged += NotificationPreference_Changed;
         Activated += (_, _) => RefreshShortcuts();
         RefreshShortcuts();
         AppUpdateManager.Instance.Changed += RefreshUpdate;
         RefreshUpdate();
         Closed += (_, _) => { preview?.Close(); AppUpdateManager.Instance.Changed -= RefreshUpdate; };
+    }
+
+    private void NotificationPreference_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!TryGetDuration(out var seconds)) return;
+        try
+        {
+            Result = store.Load() with { NotificationDurationSeconds = seconds, ShowNotificationSender = SenderBox.SelectedIndex == 0 };
+            store.Save(Result);
+        }
+        catch (Exception) { ErrorText.Text = "알림 설정을 저장하지 못했습니다. 다시 시도해 주세요."; }
+    }
+
+    private void ChangeLock_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveSettings()) return;
+        ChangeLockPasswordRequested = true; DialogResult = true;
+    }
+    private void LockNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveSettings()) return;
+        LockRequested = true; DialogResult = true;
     }
 
     private void RefreshUpdate()
@@ -100,12 +127,15 @@ public partial class SettingsWindow : Window
     private bool SaveSettings()
     {
         if (!TryGetDuration(out var seconds)) return false;
-        var updated = new AppSettings {
+        if (!int.TryParse(AutoLockMinutesBox.Text, out var lockMinutes) || lockMinutes is < 1 or > 60)
+        { ErrorText.Text = "자동 잠금 시간은 1~60분으로 입력해 주세요."; AutoLockMinutesBox.Focus(); return false; }
+        var updated = store.Load() with {
             MinimizeToTray = TrayCheckBox.IsChecked == true,
             StartWithWindows = StartupCheckBox.IsChecked == true,
             AutoUpdate = AutoUpdateCheckBox.IsChecked == true,
             ShowNotificationSender = SenderBox.SelectedIndex == 0,
-            NotificationDurationSeconds = seconds
+            NotificationDurationSeconds = seconds,
+            AutoLockMinutes = lockMinutes
         };
         try
         {

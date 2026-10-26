@@ -60,7 +60,7 @@ def main():
             continue
         relative = source.relative_to(published)
         lower = source.name.lower()
-        if (lower.startswith(".env") or lower == "settings.json" or "webview2" in lower
+        if (lower.startswith(".env") or lower == "settings.json" or lower.startswith("login.dat") or "webview2" in lower
                 or source.suffix.lower() in (".pfx", ".p12", ".pdb")
                 or any(part.lower() == "user data" for part in relative.parts)):
             raise ValueError(f"Forbidden profile, secret or debug payload: {relative}")

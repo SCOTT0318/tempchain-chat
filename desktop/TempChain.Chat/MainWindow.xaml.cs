@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         this.store = store;
         settings = store.Load();
+        InitializeSecurity();
         DataContext = this;
         CollectionViewSource.GetDefaultView(Conversations).Filter = item => MatchesSearch(((ConversationItem)item).Title);
         CollectionViewSource.GetDefaultView(Contacts).Filter = item =>
@@ -86,6 +87,7 @@ public partial class MainWindow : Window
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("TChat 열기", null, (_, _) => Dispatcher.Invoke(RestoreWindow));
         menu.Items.Add("새로 고침", null, (_, _) => Dispatcher.Invoke(() => { _ = RefreshChatAsync(true); }));
+        menu.Items.Add("잠금", null, (_, _) => Dispatcher.Invoke(LockApp));
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("종료", null, (_, _) => Dispatcher.Invoke(Exit));
         System.Drawing.Icon icon;
@@ -103,6 +105,7 @@ public partial class MainWindow : Window
         Closed += (_, _) => AppUpdateManager.Instance.Changed -= RefreshUpdateBanner;
         AppUpdateManager.Instance.Configure(settings.AutoUpdate);
         RefreshUpdateBanner();
+        RestoreSavedLogin();
     }
 
     private void RefreshUpdateBanner()
@@ -115,15 +118,16 @@ public partial class MainWindow : Window
 
     private void InstallUpdate_Click(object sender, RoutedEventArgs e) => AppUpdateManager.Instance.InstallAndRestart();
     public void ShutdownForUpdate() { exitRequested = true; Application.Current.Shutdown(); }
-    public bool CanRestartForUpdate => !signingIn && !sending && !openingConversation && !hidingConversation && !managingRoom && string.IsNullOrWhiteSpace(MessageInput.Text);
+    public bool CanRestartForUpdate => !signingIn && !unlocking && !settingLockPassword && !sending && !openingConversation && !hidingConversation && !managingRoom && string.IsNullOrWhiteSpace(MessageInput.Text);
 
     private async void Login_Click(object sender, RoutedEventArgs e) => await SignInAsync();
 
-    private async Task SignInAsync()
+    private async Task SignInAsync(string? storedUser = null, string? storedPassword = null)
     {
         if (signingIn || client is not null) return;
-        var username = UsernameBox.Text.Trim();
-        if (username.Length == 0 || LoginPasswordBox.Password.Length == 0)
+        var username = storedUser ?? UsernameBox.Text.Trim();
+        var password = storedPassword ?? LoginPasswordBox.Password;
+        if (username.Length == 0 || password.Length == 0)
         { LoginErrorText.Text = "사용자 이름과 비밀번호를 입력해 주세요."; return; }
         if (!NavigationPolicy.TryGetServerUri(ServerConfiguration.DefaultServerUrl, out var server))
         { LoginErrorText.Text = "메신저 연결 설정을 확인하지 못했습니다. 관리자에게 문의해 주세요."; return; }
@@ -137,15 +141,21 @@ public partial class MainWindow : Window
         var candidate = new SynologyChatClient(server!);
         try
         {
-            await candidate.LoginAsync(username, LoginPasswordBox.Password, cancellation.Token);
+            await candidate.LoginAsync(username, password, cancellation.Token);
             if (generation != sessionGeneration || cancellation.IsCancellationRequested) return;
             var user = candidate.CurrentUser ?? throw new InvalidOperationException();
             client = candidate;
-            try { store.Save(settings); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            sessionRecoveryRejected = false; nextSessionRecovery = 0;
+            settings = store.Load();
+            if (storedUser is null)
+            {
+                pendingLogin = (username, password);
+                ShowSecurityGate(true);
+            }
             MyNameText.Text = DisplayName(user);
             MyInitialText.Text = Initial(DisplayName(user));
             LoginView.Visibility = Visibility.Collapsed;
-            ChatView.Visibility = Visibility.Visible;
+            ChatView.Visibility = securityLocked ? Visibility.Collapsed : Visibility.Visible;
             StatusText.Text = "연락처와 대화를 불러오는 중";
             await RefreshChatAsync(true, waitForGate: true);
             if (generation == sessionGeneration && client is not null) _ = PollAsync(generation, cancellation.Token);
@@ -208,7 +218,7 @@ public partial class MainWindow : Window
             var incoming = new List<(ChatConversation Room, string Sender)>();
             {
                 foreach (var room in notifications.Where(room => !room.IsEncrypted &&
-                    !(room.Id == selectedChannelId && IsVisible && IsActive && WindowState != WindowState.Minimized)))
+                    !(room.Id == selectedChannelId && !securityLocked && IsVisible && IsActive && WindowState != WindowState.Minimized)))
                 {
                     try
                     {
@@ -237,7 +247,7 @@ public partial class MainWindow : Window
                 // as read. Hidden/minimized/background windows never mark read.
                 await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 if (active != client || generation != sessionGeneration || selectedChannelId != channelId) return;
-                if (IsVisible && IsActive && WindowState != WindowState.Minimized && Messages.Count > 0)
+                if (!securityLocked && IsVisible && IsActive && WindowState != WindowState.Minimized && Messages.Count > 0)
                 {
                     var lastShown = Messages.Max(message => message.Message.SentAt.ToUnixTimeMilliseconds());
                     displayedMessageAt[channelId] = lastShown;
@@ -251,6 +261,13 @@ public partial class MainWindow : Window
             StatusText.Text = $"연락처 {Contacts.Count}명";
         }
         catch (OperationCanceledException) { }
+        catch (SynologyApiException ex) when (ex.Code is 106 or 107 or 119 && savedLogin is not null)
+        {
+            if (active == client && generation == sessionGeneration)
+            {
+                await RecoverSessionAsync(active, token);
+            }
+        }
         catch (Exception ex)
         { if (generation == sessionGeneration && active == client) StatusText.Text = FriendlyError(ex); }
         finally { if (entered) refreshGate.Release(); }
@@ -628,15 +645,17 @@ public partial class MainWindow : Window
 
     private void ShowIncomingNotifications(IReadOnlyList<(ChatConversation Room, string Sender)> changed, int generation)
     {
-        var rooms = changed.Where(item => !(item.Room.Id == selectedChannelId && IsVisible && IsActive && WindowState != WindowState.Minimized)).ToArray();
+        var rooms = changed.Where(item => !(item.Room.Id == selectedChannelId && !securityLocked && IsVisible && IsActive && WindowState != WindowState.Minimized)).ToArray();
         if (rooms.Length == 0) return;
         var latest = rooms[^1];
         notification?.Close();
-        var content = NotificationContent.Create(latest.Sender, latest.Room.Name, settings.ShowNotificationSender);
+        var content = NotificationContent.Create(latest.Sender, latest.Room.Name, !securityLocked && settings.ShowNotificationSender);
         var popup = new NotificationWindow(content.Title, content.Detail, settings.NotificationDurationSeconds, true,
             () => {
                 if (client is null || generation != sessionGeneration) return;
-                RestoreWindow(); Conversations_Click(this, new RoutedEventArgs());
+                RestoreWindow();
+                if (securityLocked) return;
+                Conversations_Click(this, new RoutedEventArgs());
                 ConversationsList.SelectedItem = Conversations.FirstOrDefault(room => room.Id == latest.Room.Id);
             });
         notification = popup;
@@ -648,6 +667,10 @@ public partial class MainWindow : Window
     private async void Logout_Click(object sender, RoutedEventArgs e) => await SignOutAsync();
     private async Task SignOutAsync()
     {
+        try { loginStore.Clear(); }
+        catch (Exception) { LockErrorText.Text = "저장된 로그인을 지우지 못했습니다. 다시 시도해 주세요."; return; }
+        savedLogin = null; pendingLogin = null; securityLocked = settingLockPassword = false;
+        LockOverlay.Visibility = Visibility.Collapsed;
         var old = client;
         client = null; ++sessionGeneration;
         notification?.Close(); notification = null; notificationTracker.Reset();
@@ -676,11 +699,14 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
+        if (securityLocked) return;
         var dialog = new SettingsWindow(store, settings) { Owner = this };
-        if (dialog.ShowDialog() != true) return;
-        settings = dialog.Result;
+        dialog.ShowDialog();
+        settings = store.Load();
         AppUpdateManager.Instance.Configure(settings.AutoUpdate);
         notification?.Close(); notification = null;
+        if (dialog.ChangeLockPasswordRequested) ChangeLockPassword_Click(this, new RoutedEventArgs());
+        if (dialog.LockRequested) LockApp();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshChatAsync(true, waitForGate: true);
@@ -693,7 +719,9 @@ public partial class MainWindow : Window
     { if (e.Key == Key.Enter) { e.Handled = true; await SignInAsync(); } }
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (securityLocked) return;
         if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+        if (e.Key == Key.L) { e.Handled = true; LockApp(); return; }
         if (e.Key == Key.R) { e.Handled = true; await RefreshChatAsync(true, waitForGate: true); }
         if (e.Key == Key.OemComma) { e.Handled = true; Settings_Click(this, new RoutedEventArgs()); }
     }

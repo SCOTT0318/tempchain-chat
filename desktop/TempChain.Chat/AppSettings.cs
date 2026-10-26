@@ -9,8 +9,10 @@ public sealed record AppSettings
     public bool AutoUpdate { get; init; } = true;
     public bool ShowNotificationSender { get; init; } = true;
     public int NotificationDurationSeconds { get; init; } = 5;
+    public int AutoLockMinutes { get; init; } = 5;
 
     public AppSettings Normalize() => this with {
-        NotificationDurationSeconds = Math.Clamp(NotificationDurationSeconds, 3, 5)
+        NotificationDurationSeconds = Math.Clamp(NotificationDurationSeconds, 3, 5),
+        AutoLockMinutes = Math.Clamp(AutoLockMinutes, 1, 60)
     };
 }

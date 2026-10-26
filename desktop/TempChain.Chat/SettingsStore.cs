@@ -34,6 +34,8 @@ public sealed class SettingsStore
 
     public void Save(AppSettings settings)
     {
+        if (settings.AutoLockMinutes is < 1 or > 60)
+            throw new ArgumentOutOfRangeException(nameof(settings), "자동 잠금 시간은 1~60분입니다.");
         if (settings.NotificationDurationSeconds is < 3 or > 5)
             throw new ArgumentOutOfRangeException(nameof(settings), "알림 시간은 3~5초입니다.");
         Directory.CreateDirectory(BaseDirectory);
