@@ -13,7 +13,7 @@ namespace TempChain.Chat.Services;
 
 public sealed record UpdateRelease(Version Version, Uri DownloadUri, string Sha256, long Size);
 
-/// <summary>Public release feed only. Never sends NAS or GitHub credentials.</summary>
+/// <summary>Public release feed only. Never sends 서버 or GitHub credentials.</summary>
 public sealed class ReleaseUpdateClient : IDisposable
 {
     public const string Repository = "SCOTT0318/tempchain-chat";

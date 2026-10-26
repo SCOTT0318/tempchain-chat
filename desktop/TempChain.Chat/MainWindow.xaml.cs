@@ -572,7 +572,7 @@ public partial class MainWindow : Window
         leaveRoomMenu.IsEnabled = !managingRoom && named && client?.CanLeaveRooms == true;
         closeRoomMenu.IsEnabled = !managingRoom && named && client?.CanCloseRooms == true;
         foreach (var action in new[] { createRoomMenu, inviteRoomMenu, leaveRoomMenu, closeRoomMenu })
-            action.ToolTip = action.IsEnabled ? null : "새로 고침 후 NAS 권한을 확인하세요. 기본방·일대일·암호화방의 변경은 제한됩니다.";
+            action.ToolTip = action.IsEnabled ? null : "새로 고침 후 서버 권한을 확인하세요. 기본방·일대일·암호화방의 변경은 제한됩니다.";
     }
 
     private async void CreateRoom_Click(object sender, RoutedEventArgs e)
@@ -607,7 +607,7 @@ public partial class MainWindow : Window
         var active = client;
         if (managingRoom || active is null || ConversationsList.SelectedItem is not ConversationItem item) return;
         if (new CloseRoomDialog(item.Data.Name) { Owner = this }.ShowDialog() != true || active != client) return;
-        await RunRoomOperationAsync(active, async (api, ct) => { await api.CloseRoomAsync(item.Id, item.Data.Name, ct); return null; }, "전체 채팅방을 닫았습니다. 기록의 보존·삭제는 NAS 정책을 따릅니다.");
+        await RunRoomOperationAsync(active, async (api, ct) => { await api.CloseRoomAsync(item.Id, item.Data.Name, ct); return null; }, "전체 채팅방을 닫았습니다. 기록의 보존·삭제는 서버 정책을 따릅니다.");
     }
 
     private async Task RunRoomOperationAsync(SynologyChatClient active,

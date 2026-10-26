@@ -105,7 +105,7 @@ public sealed partial class SynologyChatClient
             throw new SynologyApiException(400, "방 이름이 일치하지 않습니다. 새로 고친 이름을 확인하세요.");
         await RefreshRoomPermissionsAsync(ct);
         if (!CanCloseRooms) throw new SynologyApiException(404, "전체 채팅방을 닫을 권한이 없습니다.");
-        // Official close v4 is not a guarantee of physical erasure; NAS retention policy still applies.
+        // Official close v4 is not a guarantee of physical erasure; 서버 retention policy still applies.
         await SendAsync("SYNO.Chat.Channel", "close", 4, new() { ["channel_id"] = channelId }, true, ct);
         conversations.Remove(channelId); visibility.Remove(channelId);
     }

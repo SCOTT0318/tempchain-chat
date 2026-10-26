@@ -38,7 +38,7 @@ public sealed partial class SynologyChatClient : IDisposable
     public SynologyChatClient(Uri serverUri, HttpMessageHandler? handler = null)
     {
         if (!serverUri.IsAbsoluteUri || !NavigationPolicy.TryGetServerUri(serverUri.AbsoluteUri, out _))
-            throw new ArgumentException("올바른 HTTPS NAS 서버 주소가 필요합니다.", nameof(serverUri));
+            throw new ArgumentException("올바른 HTTPS 서버 주소가 필요합니다.", nameof(serverUri));
         origin = new Uri(serverUri.GetLeftPart(UriPartial.Authority) + "/");
         http = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false })
         { Timeout = TimeSpan.FromSeconds(15) };
@@ -54,7 +54,7 @@ public sealed partial class SynologyChatClient : IDisposable
         var discovery = await SendAsync("SYNO.API.Info", "query", 1,
             new Dictionary<string, object?> { ["query"] = "all" }, false, ct);
         if (discovery.ValueKind != JsonValueKind.Object)
-            throw new SynologyApiException(0, "NAS API 목록을 확인하지 못했습니다.");
+            throw new SynologyApiException(0, "서버 API 목록을 확인하지 못했습니다.");
         foreach (var entry in discovery.EnumerateObject())
         {
             if (entry.Value.ValueKind != JsonValueKind.Object) continue;
@@ -64,7 +64,7 @@ public sealed partial class SynologyChatClient : IDisposable
             if (!IsSafeApiPath(path))
             {
                 if (entry.Name == "SYNO.API.Auth" || entry.Name.StartsWith("SYNO.Chat.", StringComparison.Ordinal))
-                    throw new SynologyApiException(0, "NAS API 경로를 안전하게 확인하지 못했습니다.");
+                    throw new SynologyApiException(0, "서버 API 경로를 안전하게 확인하지 못했습니다.");
                 continue;
             }
             apis[entry.Name] = new ApiDescription(path,
@@ -334,7 +334,7 @@ public sealed partial class SynologyChatClient : IDisposable
         {
             if (!apis.TryGetValue(api, out var description) ||
                 requestedVersion < description.Minimum || requestedVersion > description.Maximum)
-                throw new SynologyApiException(104, "NAS에서 필요한 Chat API 버전을 제공하지 않습니다.");
+                throw new SynologyApiException(104, "서버에서 필요한 Chat API 버전을 제공하지 않습니다.");
             path = description.Path;
             jsonParameters = description.JsonParameters && api != "SYNO.API.Auth";
         }
@@ -357,9 +357,9 @@ public sealed partial class SynologyChatClient : IDisposable
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
-                throw new SynologyApiException((int)response.StatusCode, "NAS 서버가 요청을 처리하지 못했습니다.");
+                throw new SynologyApiException((int)response.StatusCode, "서버가 요청을 처리하지 못했습니다.");
             if (response.Content.Headers.ContentLength > MaximumResponseBytes)
-                throw new SynologyApiException(0, "NAS 응답이 허용 크기를 초과했습니다.");
+                throw new SynologyApiException(0, "서버 응답이 허용 크기를 초과했습니다.");
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var buffer = new MemoryStream();
             var chunk = new byte[16384];
@@ -367,7 +367,7 @@ public sealed partial class SynologyChatClient : IDisposable
             while ((count = await stream.ReadAsync(chunk.AsMemory(), ct)) != 0)
             {
                 if (buffer.Length + count > MaximumResponseBytes)
-                    throw new SynologyApiException(0, "NAS 응답이 허용 크기를 초과했습니다.");
+                    throw new SynologyApiException(0, "서버 응답이 허용 크기를 초과했습니다.");
                 await buffer.WriteAsync(chunk.AsMemory(0, count), ct);
             }
             using var document = JsonDocument.Parse(buffer.ToArray());
@@ -384,8 +384,8 @@ public sealed partial class SynologyChatClient : IDisposable
                         401 => "해당 대화에 접근할 수 없습니다.",
                         403 => "대화를 찾지 못했습니다.",
                         404 => "이 작업을 수행할 권한이 없습니다.",
-                        _ => "NAS 요청을 완료하지 못했습니다."
-                    } : "NAS 요청을 완료하지 못했습니다.";
+                        _ => "서버 요청을 완료하지 못했습니다."
+                    } : "서버 요청을 완료하지 못했습니다.";
                 throw new SynologyApiException(code, message);
             }
             if (!envelope.TryGetProperty("data", out var data))
@@ -393,13 +393,13 @@ public sealed partial class SynologyChatClient : IDisposable
             return data.Clone();
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        { throw new SynologyApiException(0, "NAS 연결 시간이 초과했습니다."); }
+        { throw new SynologyApiException(0, "서버 연결 시간이 초과했습니다."); }
         catch (HttpRequestException)
-        { throw new SynologyApiException(0, "NAS에 연결하지 못했습니다. 네트워크와 인증서를 확인하세요."); }
+        { throw new SynologyApiException(0, "서버에 연결하지 못했습니다. 네트워크와 인증서를 확인하세요."); }
         catch (JsonException)
-        { throw new SynologyApiException(0, "NAS에서 올바른 API 응답을 받지 못했습니다."); }
+        { throw new SynologyApiException(0, "서버에서 올바른 API 응답을 받지 못했습니다."); }
         catch (IOException)
-        { throw new SynologyApiException(0, "NAS 응답을 읽지 못했습니다."); }
+        { throw new SynologyApiException(0, "서버 응답을 읽지 못했습니다."); }
     }
 
     private static bool IsSafeApiPath(string path)

@@ -85,7 +85,7 @@ public sealed class CloseRoomDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ResizeMode = ResizeMode.NoResize; ShowInTaskbar = false;
         var panel = new StackPanel { Margin = new Thickness(26) };
         panel.Children.Add(new TextBlock { Text = "전체 참여자에게 영향을 줍니다", FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Firebrick });
-        panel.Children.Add(new TextBlock { Text = "모든 참여자가 이 방을 사용할 수 없게 됩니다. 기록은 NAS 보존 정책에 따릅니다.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,16,0,14), LineHeight = 23 });
+        panel.Children.Add(new TextBlock { Text = "모든 참여자가 이 방을 사용할 수 없게 됩니다. 기록은 서버 보존 정책에 따릅니다.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,16,0,14), LineHeight = 23 });
         panel.Children.Add(new TextBlock { Text = "확인할 방 이름: " + roomName, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Bold, Margin = new Thickness(0,0,0,10) });
         var input = new TextBox(); AutomationProperties.SetName(input, "삭제할 채팅방 이름을 그대로 입력"); panel.Children.Add(input);
         var consent = new CheckBox { Content = "다른 참여자에게도 영향을 주는 것을 이해했습니다." }; panel.Children.Add(consent);

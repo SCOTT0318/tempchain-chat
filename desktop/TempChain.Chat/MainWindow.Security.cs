@@ -61,7 +61,7 @@ public partial class MainWindow
         catch (Exception)
         {
             // Fail closed: saved secrets are never used when the vault cannot be read.
-            LoginErrorText.Text = "저장된 로그인 정보를 열지 못했습니다. NAS 계정으로 다시 로그인해 주세요.";
+            LoginErrorText.Text = "저장된 로그인 정보를 열지 못했습니다. ERP 계정으로 다시 로그인해 주세요.";
         }
     }
 
@@ -123,7 +123,7 @@ public partial class MainWindow
                 if (sessionRecoveryRejected)
                 {
                     await SignOutAsync();
-                    LoginErrorText.Text = "NAS 계정 정보가 변경되어 다시 로그인이 필요합니다.";
+                    LoginErrorText.Text = "ERP 계정 정보가 변경되어 다시 로그인이 필요합니다.";
                     return;
                 }
                 if (client is not null) UnlockApp();
@@ -156,7 +156,7 @@ public partial class MainWindow
         {
             sessionRecoveryRejected = true;
             LockApp();
-            LockErrorText.Text = "NAS 계정 정보가 변경되었습니다. NAS 계정으로 다시 로그인해 주세요.";
+            LockErrorText.Text = "ERP 계정 정보가 변경되었습니다. ERP 계정으로 다시 로그인해 주세요.";
         }
         catch (OperationCanceledException) { }
         catch (Exception) { StatusText.Text = "로그인 연결을 복구하지 못했습니다. 잠시 후 자동으로 다시 연결합니다."; }
