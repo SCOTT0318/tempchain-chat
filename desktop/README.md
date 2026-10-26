@@ -2,11 +2,11 @@
 
 Windows 11용 **순수 WPF 사내 메신저**입니다. 로그인·직원 목록·대화 목록·메시지 화면을 네이티브 컨트롤로 구성하고 Synology Chat API와 직접 통신합니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 사용하며 선택 기능인 FastAPI 서버 없이 실행할 수 있습니다.
 
-저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.1/TempChainChat-Setup-1.1.1.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.2/TempChainChat-Setup-1.1.2.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-## v1.1.1 기능 및 확인 방법
+## v1.1.2 기능 및 확인 방법
 
-v1.1.1 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.1.md)을 참고하세요.
+v1.1.2 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.2.md)을 참고하세요.
 
 - **설정 → 바로가기 아이콘:** 바탕화면·시작 메뉴에 현재 실행 파일을 연결하는 아이콘을 만듭니다. 설정의 추가 버튼은 해당 아이콘이 없을 때만 활성화됩니다. ZIP은 폴더를 최종 위치에 옮긴 후 사용하세요. 설치 EXE에서는 두 위치의 바로가기 생성을 각각 선택할 수 있습니다.
 - **설정 → 새 메시지 알림:** **3·4·5초 표시 시간**, **보낸 사람 보이기/가리기**, 미리 보기를 제공합니다. Windows의 애니메이션 비활성화 설정을 존중합니다. 메시지 본문은 알림에 노출하지 않습니다. 가리기를 선택하면 직원 이름과 방 이름도 숨깁니다.
@@ -32,12 +32,12 @@ v1.1.1 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자
 ```powershell
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw '테스트 실패' }
-./desktop/scripts/Build-Desktop.ps1 -Version 1.1.1 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
+./desktop/scripts/Build-Desktop.ps1 -Version 1.1.2 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-결과는 `dist/TempChainChat-Setup-1.1.1.exe`, `dist/TempChainChat-1.1.1-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 자동 업데이트는 제공하지 않습니다.
+결과는 `dist/TempChainChat-Setup-1.1.2.exe`, `dist/TempChainChat-1.1.2-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 설정에서 현재·최신 버전을 확인하고 자동 확인·다운로드를 선택할 수 있습니다. 준비된 업데이트는 ‘업데이트 및 재시작’으로 적용합니다. 비공개 저장소에서는 공개 전까지 자동 확인이 제한됩니다.
 
-Windows WPF 빌드와 코어 회귀 테스트 76개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
+Windows WPF 빌드와 코어 회귀 테스트 95개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
 
 Linux 교차 빌드 환경에서는 먼저 자체 포함 게시물을 만들고 아래 스크립트로 같은 NSIS 소스·체크섬을 사용할 수 있습니다. 이 방식도 Windows 실행 검증을 대신하지 않습니다.
 
@@ -45,6 +45,14 @@ Linux 교차 빌드 환경에서는 먼저 자체 포함 게시물을 만들고 
 dotnet publish desktop/TempChain.Chat/TempChain.Chat.csproj -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/windows-publish
 python3 desktop/scripts/Package-Preview.py --publish-dir artifacts/windows-publish --makensis /path/to/makensis --nsis-dir /path/to/nsis
 ```
+
+## 버전 확인과 자동 업데이트
+
+설정에서 현재·최신 정식 버전, 확인·다운로드 상태와 자동 확인 옵션을 제공합니다. 자동 확인은 앱 시작 시와 6시간마다 수행하며, 설치는 사용자가 **업데이트 및 재시작**을 눌렀을 때 실행합니다. 메시지를 작성하거나 전송·방 관리 작업 중이면 재시작을 보류합니다. 업데이트 후 다시 로그인합니다.
+
+GitHub의 고정 저장소 정식 릴리스만 사용하며 사전 릴리스·동일 버전·낮은 버전은 설치하지 않습니다. 설치 파일의 정확한 이름·HTTPS 주소·크기·SHA-256을 확인하고 다운로드 직후와 설치 직전에 해시를 검사합니다. 앱이 종료된 뒤 설치하며 실패 시 결과 파일을 남깁니다. 자동 설치 모드는 기존 바로가기 유무와 설정을 보존합니다. ZIP에서 실행 중인 앱은 자동 설치 대상이 아닙니다.
+
+저장소는 사용자가 공개 전환할 예정입니다. 공개 전에는 직원 앱이 인증 없이 조회·다운로드할 수 없으므로 확인 실패를 안내합니다. 앱에 GitHub 토큰이나 NAS 인증값을 업데이트 요청으로 보내지 않습니다.
 
 ## 지원 범위
 
@@ -98,6 +106,7 @@ dotnet run --project desktop/TempChain.Chat/TempChain.Chat.csproj
 | --- | --- | --- |
 | `MinimizeToTray` | `true` | 창 닫기 시 트레이에 남김 |
 | `StartWithWindows` | `false` | 선택한 경우 Windows 로그인 시 실행 |
+| `AutoUpdate` | `true` | 시작 시와 6시간마다 정식 업데이트 확인·다운로드 |
 | `NotificationDurationSeconds` | `5` | 팝업 표시 시간, 3·4·5초 |
 | `ShowNotificationSender` | `true` | 알림에 보낸 사람과 방 이름 표시 |
 
@@ -149,9 +158,9 @@ dotnet publish desktop/TempChain.Chat/TempChain.Chat.csproj -c Release -r win-x6
 
 ```text
 dist/
-  TempChainChat-1.1.1-win-x64/
-  TempChainChat-1.1.1-win-x64.zip
-  TempChainChat-Setup-1.1.1.exe
+  TempChainChat-1.1.2-win-x64/
+  TempChainChat-1.1.2-win-x64.zip
+  TempChainChat-Setup-1.1.2.exe
   SHA256SUMS.txt
 ```
 

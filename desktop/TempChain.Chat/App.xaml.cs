@@ -29,6 +29,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        AppUpdateManager.Instance.Dispose();
         instance?.Dispose();
         base.OnExit(e);
     }

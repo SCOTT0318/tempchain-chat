@@ -8,7 +8,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>TempChain.Chat</AssemblyName>
     <RootNamespace>TempChain.Chat</RootNamespace>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon Condition="Exists('Assets/app.ico')">Assets/app.ico</ApplicationIcon>
     <Platforms>AnyCPU;x64</Platforms>

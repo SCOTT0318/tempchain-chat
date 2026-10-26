@@ -13,6 +13,7 @@
     <Compile Include="../TempChain.Chat/NavigationPolicy.cs" Link="Production/NavigationPolicy.cs" />
     <Compile Include="../TempChain.Chat/ServerConfiguration.cs" Link="Production/ServerConfiguration.cs" />
     <Compile Include="../TempChain.Chat/NotificationTracker.cs" Link="Production/NotificationTracker.cs" />
+    <Compile Include="../TempChain.Chat/UpdateInstaller.cs" Link="Production/UpdateInstaller.cs" />
     <Compile Include="../TempChain.Chat/Models/*.cs" Link="Production/Models/%(Filename)%(Extension)" />
     <Compile Include="../TempChain.Chat/Services/*.cs" Link="Production/Services/%(Filename)%(Extension)" />
   </ItemGroup>

@@ -6,6 +6,7 @@ SetDatablockOptimize on
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 !include "nsDialogs.nsh"
+!include "FileFunc.nsh"
 
 !ifndef APP_VERSION
   !error "APP_VERSION is required"
@@ -57,6 +58,7 @@ Var DesktopShortcutChoice
 Var StartShortcutChoice
 Var DesktopShortcutCheckbox
 Var StartShortcutCheckbox
+Var UpdateMode
 
 Function ShortcutOptionsCreate
   !insertmacro MUI_HEADER_TEXT "바로가기 설정" "앱을 편하게 열 수 있는 위치를 선택하세요."
@@ -83,6 +85,13 @@ FunctionEnd
 
 Function .onInit
   SetShellVarContext current
+  StrCpy $UpdateMode "0"
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/UPDATE" $1
+  ${IfNot} ${Errors}
+    StrCpy $UpdateMode "1"
+  ${EndIf}
   StrCpy $DesktopShortcutChoice ${BST_CHECKED}
   StrCpy $StartShortcutChoice ${BST_CHECKED}
 check_running_app:
@@ -119,6 +128,7 @@ Section "TempChain Chat" MainSection
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   IfErrors install_failed
 
+  ${If} $UpdateMode != "1"
   CreateDirectory "$SMPROGRAMS\TempChain Chat"
   ${If} $StartShortcutChoice == ${BST_CHECKED}
     CreateShortcut "$SMPROGRAMS\TempChain Chat\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
@@ -126,6 +136,7 @@ Section "TempChain Chat" MainSection
   CreateShortcut "$SMPROGRAMS\TempChain Chat\제거.lnk" "$INSTDIR\Uninstall.exe"
   ${If} $DesktopShortcutChoice == ${BST_CHECKED}
     CreateShortcut "$DESKTOP\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
+  ${EndIf}
   ${EndIf}
 
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TempChainChat" "DisplayName" "TempChain Chat"

@@ -21,11 +21,32 @@ public partial class SettingsWindow : Window
         Result = current;
         TrayCheckBox.IsChecked = current.MinimizeToTray;
         StartupCheckBox.IsChecked = current.StartWithWindows;
+        AutoUpdateCheckBox.IsChecked = current.AutoUpdate;
         DurationBox.SelectedIndex = current.Normalize().NotificationDurationSeconds - 3;
         SenderBox.SelectedIndex = current.ShowNotificationSender ? 0 : 1;
         Activated += (_, _) => RefreshShortcuts();
         RefreshShortcuts();
-        Closed += (_, _) => preview?.Close();
+        AppUpdateManager.Instance.Changed += RefreshUpdate;
+        RefreshUpdate();
+        Closed += (_, _) => { preview?.Close(); AppUpdateManager.Instance.Changed -= RefreshUpdate; };
+    }
+
+    private void RefreshUpdate()
+    {
+        var updates = AppUpdateManager.Instance;
+        CurrentVersionText.Text = "v" + AppUpdateManager.CurrentVersionText;
+        LatestVersionText.Text = updates.LatestVersionText;
+        UpdateStatusText.Text = updates.Status;
+        CheckUpdateButton.IsEnabled = !updates.IsBusy;
+        ApplyUpdateButton.IsEnabled = updates.CanInstall;
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e) => await AppUpdateManager.Instance.CheckAndDownloadAsync();
+    private void ApplyUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveSettings()) return;
+        DialogResult = true;
+        Dispatcher.BeginInvoke(new Action(() => AppUpdateManager.Instance.InstallAndRestart()));
     }
 
     private bool TryGetDuration(out int seconds)
@@ -72,10 +93,16 @@ public partial class SettingsWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryGetDuration(out var seconds)) return;
+        if (SaveSettings()) DialogResult = true;
+    }
+
+    private bool SaveSettings()
+    {
+        if (!TryGetDuration(out var seconds)) return false;
         var updated = new AppSettings {
             MinimizeToTray = TrayCheckBox.IsChecked == true,
             StartWithWindows = StartupCheckBox.IsChecked == true,
+            AutoUpdate = AutoUpdateCheckBox.IsChecked == true,
             ShowNotificationSender = SenderBox.SelectedIndex == 0,
             NotificationDurationSeconds = seconds
         };
@@ -85,11 +112,12 @@ public partial class SettingsWindow : Window
             try { store.Save(updated); }
             catch { StartupRegistration.Apply(Result.StartWithWindows); throw; }
             Result = updated;
-            DialogResult = true;
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SecurityException or ArgumentException)
         {
             ErrorText.Text = "설정을 저장하지 못했습니다. 사용자 폴더와 자동 실행 권한을 확인하고 다시 시도하세요.";
+            return false;
         }
     }
 }

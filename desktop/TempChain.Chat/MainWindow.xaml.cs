@@ -98,7 +98,23 @@ public partial class MainWindow : Window
     {
         UsernameBox.Focus();
         if (store.LoadWarning is not null) LoginErrorText.Text = store.LoadWarning;
+        AppUpdateManager.Instance.Changed += RefreshUpdateBanner;
+        Closed += (_, _) => AppUpdateManager.Instance.Changed -= RefreshUpdateBanner;
+        AppUpdateManager.Instance.Configure(settings.AutoUpdate);
+        RefreshUpdateBanner();
     }
+
+    private void RefreshUpdateBanner()
+    {
+        var updates = AppUpdateManager.Instance;
+        UpdateBanner.Visibility = updates.IsReady ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBannerText.Text = $"v{updates.LatestVersionText} 업데이트가 준비되었습니다. 재시작하면 다시 로그인해야 합니다.";
+        InstallUpdateButton.IsEnabled = updates.CanInstall;
+    }
+
+    private void InstallUpdate_Click(object sender, RoutedEventArgs e) => AppUpdateManager.Instance.InstallAndRestart();
+    public void ShutdownForUpdate() { exitRequested = true; Application.Current.Shutdown(); }
+    public bool CanRestartForUpdate => !signingIn && !sending && !openingConversation && !hidingConversation && !managingRoom && string.IsNullOrWhiteSpace(MessageInput.Text);
 
     private async void Login_Click(object sender, RoutedEventArgs e) => await SignInAsync();
 
@@ -662,6 +678,7 @@ public partial class MainWindow : Window
         var dialog = new SettingsWindow(store, settings) { Owner = this };
         if (dialog.ShowDialog() != true) return;
         settings = dialog.Result;
+        AppUpdateManager.Instance.Configure(settings.AutoUpdate);
         notification?.Close(); notification = null;
     }
 

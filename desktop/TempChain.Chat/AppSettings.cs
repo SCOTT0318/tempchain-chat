@@ -6,6 +6,7 @@ public sealed record AppSettings
 {
     public bool MinimizeToTray { get; init; } = true;
     public bool StartWithWindows { get; init; } = false;
+    public bool AutoUpdate { get; init; } = true;
     public bool ShowNotificationSender { get; init; } = true;
     public int NotificationDurationSeconds { get; init; } = 5;
 
