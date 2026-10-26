@@ -41,7 +41,7 @@ public sealed class NotificationWindow : Window
         open.Click += (_, _) => { Dismiss(); activate?.Invoke(); };
         Grid.SetRow(open, 1); panel.Children.Add(open);
         Content = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(203, 221, 237)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Margin = new Thickness(5), Child = panel };
-        timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(seconds, 1, 60)) };
+        timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(seconds, 3, 5)) };
         timer.Tick += (_, _) => Dismiss();
         Loaded += (_, _) => {
             var work = SystemParameters.WorkArea;

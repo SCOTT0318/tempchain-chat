@@ -2,14 +2,14 @@
 
 Windows 11용 **순수 WPF 사내 메신저**입니다. 로그인·직원 목록·대화 목록·메시지 화면을 네이티브 컨트롤로 구성하고 Synology Chat API와 직접 통신합니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 사용하며 선택 기능인 FastAPI 서버 없이 실행할 수 있습니다.
 
-저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.0/TempChainChat-Setup-1.1.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.1/TempChainChat-Setup-1.1.1.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-## v1.1.0 기능 및 확인 방법
+## v1.1.1 기능 및 확인 방법
 
-v1.1.0 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.0.md)을 참고하세요.
+v1.1.1 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.1.md)을 참고하세요.
 
-- **설정 → 바로가기 아이콘:** 바탕화면·시작 메뉴에 현재 실행 파일을 연결하는 아이콘을 만듭니다. 기존 아이콘은 덮어쓰기 전에 확인합니다. ZIP은 폴더를 최종 위치에 옮긴 후 사용하세요. 설치 EXE도 두 위치의 바로가기를 만듭니다.
-- **설정 → 새 메시지 알림:** 알림 켜기/끄기, 나타남·사라짐 애니메이션, 소리, **1~60초 표시 시간**, 미리 보기를 제공합니다. Windows의 애니메이션 비활성화 설정을 존중합니다. 메시지 본문은 알림에 노출하지 않습니다.
+- **설정 → 바로가기 아이콘:** 바탕화면·시작 메뉴에 현재 실행 파일을 연결하는 아이콘을 만듭니다. 설정의 추가 버튼은 해당 아이콘이 없을 때만 활성화됩니다. ZIP은 폴더를 최종 위치에 옮긴 후 사용하세요. 설치 EXE에서는 두 위치의 바로가기 생성을 각각 선택할 수 있습니다.
+- **설정 → 새 메시지 알림:** **3·4·5초 표시 시간**, **보낸 사람 보이기/가리기**, 미리 보기를 제공합니다. Windows의 애니메이션 비활성화 설정을 존중합니다. 메시지 본문은 알림에 노출하지 않습니다. 가리기를 선택하면 직원 이름과 방 이름도 숨깁니다.
 - **다른 방 알림:** 최초 로그인 때 기존 미읽음 기록은 알리지 않습니다. 이후 다른 방·숨긴 방의 새 일반 메시지를 확인하고, 현재 보고 있는 방·내가 보낸 최신 메시지는 제외합니다. 앱이 완전히 종료됐거나 네트워크가 끊기면 알림이 오지 않습니다. 약 3초 조회 방식이며 스레드·암호화 대화 알림은 지원하지 않습니다.
 - **대화 상단 → 채팅방 관리:** 비공개/공개 방 만들기, 이름·설명 입력, 직원 다중 선택·검색, 초대, 나가기, 전체 방 삭제(폐쇄)를 제공합니다. 기본방·나에게 보내기·일대일·암호화 대화의 관리는 차단합니다. 공개방 생성에는 별도 NAS 권한이 필요합니다.
 - **삭제 안전장치:** ‘숨기기’는 내 목록만 정리하고 ‘나가기’는 내 참여를 끝냅니다. ‘전체 채팅방 삭제(폐쇄)’는 다른 참여자에게도 영향을 주며 방 이름 재입력·동의 후 실행합니다. NAS의 `Channel.close`를 사용하므로 **기록의 물리적 영구 삭제를 보장하지 않습니다.** 서버 보존 정책을 따릅니다.
@@ -18,10 +18,10 @@ v1.1.0 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자
 ### 사용자가 해 줄 확인
 
 1. Windows 11 x64에서 기존 메신저를 **알림 영역 → 종료**로 완전히 닫고 설치 EXE를 실행합니다. 코드 서명되지 않았으므로 회사 정책에 따라 검토하고 SHA-256을 확인하세요. 보안 경고를 무조건 우회하지 마세요.
-2. 로그인 후 설정에서 두 바로가기, 3초·10초 알림 미리 보기, 애니메이션·소리, 설정 저장 후 재실행을 확인합니다.
+2. 로그인 후 설정에서 두 바로가기, 3초·4초·5초 알림 미리 보기, 보낸 사람 보이기·가리기, 설정 저장 후 재실행을 확인합니다.
 3. 직원 계정 두 개로 **테스트 전용 비공개방**을 만들고 초대·송수신을 확인합니다. 다른 방을 보거나 최소화한 상태에서 상대가 보낸 메시지의 알림과 클릭 이동을 확인합니다.
 4. 테스트 방에서만 숨기기·나가기·삭제(폐쇄)를 확인합니다. **실제 업무방으로 폐쇄를 시험하지 마세요.**
-5. 관리 메뉴가 회색이면 Ctrl+R로 새로 고침합니다. 공식 웹 Chat에서도 해당 직원 계정의 생성·초대 권한이 있는지 관리자가 확인해야 합니다. 기능을 위해 직원에게 DSM 관리자 권한을 부여할 필요는 없습니다. 암호·OTP·세션을 채팅으로 보내지 마세요.
+5. 관리 메뉴가 회색이면 Ctrl+R로 새로 고침합니다. 공식 웹 Chat에서도 해당 직원 계정의 생성·초대 권한이 있는지 관리자가 확인해야 합니다. 기능을 위해 직원에게 DSM 관리자 권한을 부여할 필요는 없습니다. 암호·세션을 채팅으로 보내지 마세요.
 
 ### 직접 빌드
 
@@ -32,12 +32,12 @@ v1.1.0 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자
 ```powershell
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw '테스트 실패' }
-./desktop/scripts/Build-Desktop.ps1 -Version 1.1.0 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
+./desktop/scripts/Build-Desktop.ps1 -Version 1.1.1 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-결과는 `dist/TempChainChat-Setup-1.1.0.exe`, `dist/TempChainChat-1.1.0-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 자동 업데이트는 제공하지 않습니다.
+결과는 `dist/TempChainChat-Setup-1.1.1.exe`, `dist/TempChainChat-1.1.1-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 자동 업데이트는 제공하지 않습니다.
 
-Windows WPF 빌드와 코어 회귀 테스트 75개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
+Windows WPF 빌드와 코어 회귀 테스트 76개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
 
 Linux 교차 빌드 환경에서는 먼저 자체 포함 게시물을 만들고 아래 스크립트로 같은 NSIS 소스·체크섬을 사용할 수 있습니다. 이 방식도 Windows 실행 검증을 대신하지 않습니다.
 
@@ -48,7 +48,7 @@ python3 desktop/scripts/Package-Preview.py --publish-dir artifacts/windows-publi
 
 ## 지원 범위
 
-- 기존 NAS 계정·비밀번호 및 필요한 OTP로 로그인
+- 기존 NAS 계정·비밀번호로 로그인
 - Chat 직원 목록과 참여 대화 조회
 - 동료 선택으로 암호화하지 않은 일대일 대화 시작
 - 암호화하지 않은 대화의 텍스트 기록 조회와 본인 계정으로 전송
@@ -90,7 +90,7 @@ dotnet run --project desktop/TempChain.Chat/TempChain.Chat.csproj
 
 ## 인증과 설정
 
-비밀번호는 WPF 로그인 화면에서 입력합니다. 비밀번호를 설정 파일에 저장하지 않고 SID는 앱 메모리에서만 유지하므로 앱을 완전히 종료하면 다시 로그인해야 합니다. NAS MFA 정책을 그대로 따릅니다.
+비밀번호는 WPF 로그인 화면에서 입력합니다. 비밀번호를 설정 파일에 저장하지 않고 SID는 앱 메모리에서만 유지하므로 앱을 완전히 종료하면 다시 로그인해야 합니다. 앱에서는 사용자 이름과 비밀번호만 입력받으며 NAS 계정 정책은 변경하지 않습니다.
 
 설정 파일은 `%LOCALAPPDATA%\TempChain\Chat\settings.json`입니다.
 
@@ -98,10 +98,8 @@ dotnet run --project desktop/TempChain.Chat/TempChain.Chat.csproj
 | --- | --- | --- |
 | `MinimizeToTray` | `true` | 창 닫기 시 트레이에 남김 |
 | `StartWithWindows` | `false` | 선택한 경우 Windows 로그인 시 실행 |
-| `EnableNotifications` | `true` | 새 일반 메시지 팝업 |
-| `AnimateNotifications` | `true` | 팝업 나타남·사라짐 애니메이션 |
-| `NotificationSound` | `false` | 새 메시지 소리 |
-| `NotificationDurationSeconds` | `5` | 팝업 표시 시간, 1~60초 |
+| `NotificationDurationSeconds` | `5` | 팝업 표시 시간, 3·4·5초 |
+| `ShowNotificationSender` | `true` | 알림에 보낸 사람과 방 이름 표시 |
 
 사용자 설정에는 서버 주소를 저장하지 않습니다. 트레이 아이콘을 두 번 누르거나 **TempChain Chat 열기**로 복원합니다. 완전히 종료하려면 트레이의 **종료**를 사용합니다. 설치 프로그램은 자동 실행을 임의로 켜지 않습니다.
 
@@ -151,9 +149,9 @@ dotnet publish desktop/TempChain.Chat/TempChain.Chat.csproj -c Release -r win-x6
 
 ```text
 dist/
-  TempChainChat-1.1.0-win-x64/
-  TempChainChat-1.1.0-win-x64.zip
-  TempChainChat-Setup-1.1.0.exe
+  TempChainChat-1.1.1-win-x64/
+  TempChainChat-1.1.1-win-x64.zip
+  TempChainChat-Setup-1.1.1.exe
   SHA256SUMS.txt
 ```
 
@@ -173,7 +171,7 @@ Windows 설정의 설치된 앱 또는 시작 메뉴의 제거를 사용합니�
 
 - [ ] 게시 exe 및 설치·제거를 Windows 11에서 직접 확인
 - [x] 네이티브 앱에서 실제 NAS 인증 및 직원 24명 조회 확인
-- [ ] 일반 직원 계정 로그인·OTP 확인
+- [ ] 일반 직원 계정 로그인 확인
 - [ ] 직원 두 명의 일대일 생성, 메시지 송수신·기록 재조회 확인
 - [ ] 대화 숨기기·연락처에서 다시 열기 및 메시지 보존 확인
 - [ ] 표시한 대화의 읽음 처리와 최소화·트레이 상태의 미읽음 보존 확인

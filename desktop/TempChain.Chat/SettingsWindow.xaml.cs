@@ -4,6 +4,7 @@ using System.Security;
 using System.Runtime.InteropServices;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace TempChain.Chat;
 
@@ -20,18 +21,19 @@ public partial class SettingsWindow : Window
         Result = current;
         TrayCheckBox.IsChecked = current.MinimizeToTray;
         StartupCheckBox.IsChecked = current.StartWithWindows;
-        NotificationsCheckBox.IsChecked = current.EnableNotifications;
-        AnimationCheckBox.IsChecked = current.AnimateNotifications;
-        SoundCheckBox.IsChecked = current.NotificationSound;
-        DurationBox.Text = current.Normalize().NotificationDurationSeconds.ToString(CultureInfo.InvariantCulture);
+        DurationBox.SelectedIndex = current.Normalize().NotificationDurationSeconds - 3;
+        SenderBox.SelectedIndex = current.ShowNotificationSender ? 0 : 1;
+        Activated += (_, _) => RefreshShortcuts();
+        RefreshShortcuts();
         Closed += (_, _) => preview?.Close();
     }
 
     private bool TryGetDuration(out int seconds)
     {
-        if (int.TryParse(DurationBox.Text, NumberStyles.None, CultureInfo.InvariantCulture, out seconds) && seconds is >= 1 and <= 60)
+        if (DurationBox.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag?.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out seconds) && seconds is >= 3 and <= 5)
         { ErrorText.Text = ""; return true; }
-        ErrorText.Text = "알림 표시 시간은 1~60 사이의 정수로 입력해 주세요.";
+        seconds = 5;
+        ErrorText.Text = "알림 표시 시간을 선택해 주세요.";
         DurationBox.Focus(); return false;
     }
 
@@ -39,24 +41,33 @@ public partial class SettingsWindow : Window
     {
         if (!TryGetDuration(out var seconds)) return;
         preview?.Close();
-        preview = new NotificationWindow("알림 미리 보기", $"새 메시지 알림은 {seconds}초 동안 표시됩니다.", seconds, AnimationCheckBox.IsChecked == true);
+        var content = NotificationContent.Create("홍길동", "팀 채팅방", SenderBox.SelectedIndex == 0);
+        preview = new NotificationWindow(content.Title, content.Detail, seconds, true);
         preview.Show();
     }
 
     private void DesktopShortcut_Click(object sender, RoutedEventArgs e) => CreateShortcut(true);
     private void StartShortcut_Click(object sender, RoutedEventArgs e) => CreateShortcut(false);
+    private void RefreshShortcuts()
+    {
+        var desktopExists = File.Exists(ShortcutRegistration.GetPath(true));
+        var startExists = File.Exists(ShortcutRegistration.GetPath(false));
+        DesktopShortcutButton.IsEnabled = !desktopExists;
+        StartShortcutButton.IsEnabled = !startExists;
+        DesktopShortcutStatus.Text = desktopExists ? "추가되어 있어요" : "바로가기 없음";
+        StartShortcutStatus.Text = startExists ? "추가되어 있어요" : "바로가기 없음";
+    }
     private void CreateShortcut(bool desktop)
     {
         try
         {
-            var overwrite = File.Exists(ShortcutRegistration.GetPath(desktop));
-            if (overwrite && MessageBox.Show(this, "같은 이름의 바로가기가 있습니다. 현재 앱으로 다시 연결할까요?", "바로가기 만들기",
-                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            ShortcutRegistration.Create(desktop, overwrite);
+            if (File.Exists(ShortcutRegistration.GetPath(desktop))) { RefreshShortcuts(); return; }
+            ShortcutRegistration.Create(desktop, overwrite: false);
             ShortcutStatusText.Text = desktop ? "바탕화면 아이콘을 만들었습니다." : "시작 메뉴 아이콘을 만들었습니다.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException or SecurityException)
         { ErrorText.Text = "바로가기를 만들지 못했습니다. 설치된 앱인지, Windows 폴더 쓰기 권한이 있는지 확인해 주세요."; }
+        finally { RefreshShortcuts(); }
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -65,9 +76,7 @@ public partial class SettingsWindow : Window
         var updated = new AppSettings {
             MinimizeToTray = TrayCheckBox.IsChecked == true,
             StartWithWindows = StartupCheckBox.IsChecked == true,
-            EnableNotifications = NotificationsCheckBox.IsChecked == true,
-            AnimateNotifications = AnimationCheckBox.IsChecked == true,
-            NotificationSound = SoundCheckBox.IsChecked == true,
+            ShowNotificationSender = SenderBox.SelectedIndex == 0,
             NotificationDurationSeconds = seconds
         };
         try

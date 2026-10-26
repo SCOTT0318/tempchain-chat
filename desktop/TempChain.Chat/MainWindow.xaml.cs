@@ -65,7 +65,7 @@ public partial class MainWindow : Window
 
     private void ConfigureConversationMenu()
     {
-        var hide = new MenuItem { Header = "대화 목록에서 숨기기" };
+        var hide = CreateMenuItem("대화 목록에서 숨기기", "\uE8D4");
         hide.Click += HideConversation_Click;
         var menu = new ContextMenu();
         menu.Items.Add(hide);
@@ -120,8 +120,7 @@ public partial class MainWindow : Window
         var candidate = new SynologyChatClient(server!);
         try
         {
-            await candidate.LoginAsync(username, LoginPasswordBox.Password,
-                string.IsNullOrWhiteSpace(OtpBox.Text) ? null : OtpBox.Text.Trim(), cancellation.Token);
+            await candidate.LoginAsync(username, LoginPasswordBox.Password, cancellation.Token);
             if (generation != sessionGeneration || cancellation.IsCancellationRequested) return;
             var user = candidate.CurrentUser ?? throw new InvalidOperationException();
             client = candidate;
@@ -143,7 +142,7 @@ public partial class MainWindow : Window
         finally
         {
             if (!ReferenceEquals(client, candidate)) candidate.Dispose();
-            LoginPasswordBox.Clear(); OtpBox.Clear();
+            LoginPasswordBox.Clear();
             signingIn = false;
             LoginButton.IsEnabled = true;
             LoginButton.Content = "로그인";
@@ -189,8 +188,7 @@ public partial class MainWindow : Window
             }
             var notifications = notificationTracker.Observe(active.NotificationConversations);
             ApplyConversations(conversations);
-            var incoming = new List<ChatConversation>();
-            if (settings.EnableNotifications)
+            var incoming = new List<(ChatConversation Room, string Sender)>();
             {
                 foreach (var room in notifications.Where(room => !room.IsEncrypted &&
                     !(room.Id == selectedChannelId && IsVisible && IsActive && WindowState != WindowState.Minimized)))
@@ -199,7 +197,7 @@ public partial class MainWindow : Window
                     {
                         // Confirm the newest author; existing unread messages must not make our own send trigger a popup.
                         var posts = await active.GetMessagesAsync(room.Id, token);
-                        if (posts.LastOrDefault() is { IsOwn: false }) incoming.Add(room);
+                        if (posts.LastOrDefault() is { IsOwn: false } newest) incoming.Add((room, newest.UserName));
                     }
                     catch (SynologyApiException) { /* An inaccessible/deleted room must not stop message polling. */ }
                     if (active != client || generation != sessionGeneration) return;
@@ -501,13 +499,20 @@ public partial class MainWindow : Window
         DirectoryEmptyText.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private static MenuItem CreateMenuItem(string label, string glyph) => new()
+    {
+        Header = label,
+        Icon = new TextBlock { Text = glyph, FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"), FontSize = 14 }
+    };
+
     private void ConfigureRoomMenu()
     {
         var menu = new ContextMenu();
-        createRoomMenu = new MenuItem { Header = "새 채팅방 만들기" }; createRoomMenu.Click += CreateRoom_Click;
-        inviteRoomMenu = new MenuItem { Header = "선택한 방에 직원 초대" }; inviteRoomMenu.Click += InviteRoom_Click;
-        leaveRoomMenu = new MenuItem { Header = "선택한 방 나가기" }; leaveRoomMenu.Click += LeaveRoom_Click;
-        closeRoomMenu = new MenuItem { Header = "전체 채팅방 삭제(폐쇄)…" }; closeRoomMenu.Click += CloseRoom_Click;
+        createRoomMenu = CreateMenuItem("새 채팅방 만들기", "\uE710"); createRoomMenu.Click += CreateRoom_Click;
+        inviteRoomMenu = CreateMenuItem("선택한 방에 직원 초대", "\uE8FA"); inviteRoomMenu.Click += InviteRoom_Click;
+        leaveRoomMenu = CreateMenuItem("선택한 방 나가기", "\uE8BB"); leaveRoomMenu.Click += LeaveRoom_Click;
+        closeRoomMenu = CreateMenuItem("전체 채팅방 삭제(폐쇄)…", "\uE74D");
+        closeRoomMenu.Style = (Style)FindResource("DangerMenuItem"); closeRoomMenu.Click += CloseRoom_Click;
         menu.Items.Add(createRoomMenu); menu.Items.Add(inviteRoomMenu); menu.Items.Add(leaveRoomMenu);
         menu.Items.Add(new Separator()); menu.Items.Add(closeRoomMenu);
         menu.Opened += (_, _) => UpdateRoomActions(); RoomActionsButton.ContextMenu = menu;
@@ -604,27 +609,23 @@ public partial class MainWindow : Window
         finally { if (entered) refreshGate.Release(); managingRoom = false; UpdateRoomActions(); }
     }
 
-    private void ShowIncomingNotifications(IReadOnlyList<ChatConversation> changed, int generation)
+    private void ShowIncomingNotifications(IReadOnlyList<(ChatConversation Room, string Sender)> changed, int generation)
     {
-        var rooms = changed.Where(room => !(room.Id == selectedChannelId && IsVisible && IsActive && WindowState != WindowState.Minimized)).ToArray();
-        if (!settings.EnableNotifications || rooms.Length == 0) return;
+        var rooms = changed.Where(item => !(item.Room.Id == selectedChannelId && IsVisible && IsActive && WindowState != WindowState.Minimized)).ToArray();
+        if (rooms.Length == 0) return;
         var latest = rooms[^1];
         notification?.Close();
-        var popup = new NotificationWindow(rooms.Length == 1 ? latest.Name : $"{rooms.Length}개 채팅방에 새 메시지",
-            "새 메시지가 도착했습니다. 클릭하면 대화를 엽니다.", settings.NotificationDurationSeconds, settings.AnimateNotifications,
+        var content = NotificationContent.Create(latest.Sender, latest.Room.Name, settings.ShowNotificationSender);
+        var popup = new NotificationWindow(content.Title, content.Detail, settings.NotificationDurationSeconds, true,
             () => {
                 if (client is null || generation != sessionGeneration) return;
                 RestoreWindow(); Conversations_Click(this, new RoutedEventArgs());
-                ConversationsList.SelectedItem = Conversations.FirstOrDefault(room => room.Id == latest.Id);
+                ConversationsList.SelectedItem = Conversations.FirstOrDefault(room => room.Id == latest.Room.Id);
             });
         notification = popup;
         popup.Closed += (_, _) => { if (ReferenceEquals(notification, popup)) notification = null; };
         popup.Show();
-        if (settings.NotificationSound)
-        {
-            try { System.Media.SystemSounds.Asterisk.Play(); }
-            catch (InvalidOperationException) { }
-        }
+
     }
 
     private async void Logout_Click(object sender, RoutedEventArgs e) => await SignOutAsync();
@@ -652,7 +653,7 @@ public partial class MainWindow : Window
         Conversations.Clear(); Contacts.Clear(); ClearSelection();
         displayedMessageAt.Clear(); readMessageAt.Clear();
         ChatView.Visibility = Visibility.Collapsed; LoginView.Visibility = Visibility.Visible;
-        LoginErrorText.Text = ""; LoginPasswordBox.Clear(); OtpBox.Clear();
+        LoginErrorText.Text = ""; LoginPasswordBox.Clear();
         UsernameBox.Focus();
     }
 
@@ -661,7 +662,7 @@ public partial class MainWindow : Window
         var dialog = new SettingsWindow(store, settings) { Owner = this };
         if (dialog.ShowDialog() != true) return;
         settings = dialog.Result;
-        if (!settings.EnableNotifications) { notification?.Close(); notification = null; }
+        notification?.Close(); notification = null;
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshChatAsync(true, waitForGate: true);

@@ -34,8 +34,8 @@ public sealed class SettingsStore
 
     public void Save(AppSettings settings)
     {
-        if (settings.NotificationDurationSeconds is < 1 or > 60)
-            throw new ArgumentOutOfRangeException(nameof(settings), "알림 시간은 1~60초입니다.");
+        if (settings.NotificationDurationSeconds is < 3 or > 5)
+            throw new ArgumentOutOfRangeException(nameof(settings), "알림 시간은 3~5초입니다.");
         Directory.CreateDirectory(BaseDirectory);
         var temporary = SettingsPath + ".tmp";
         var content = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });

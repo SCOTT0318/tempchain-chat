@@ -44,7 +44,7 @@ public sealed partial class SynologyChatClient : IDisposable
         { Timeout = TimeSpan.FromSeconds(15) };
     }
 
-    public async Task LoginAsync(string username, string password, string? otpCode = null, CancellationToken ct = default)
+    public async Task LoginAsync(string username, string password, CancellationToken ct = default)
     {
         ThrowIfDisposed();
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
@@ -76,7 +76,6 @@ public sealed partial class SynologyChatClient : IDisposable
             ["account"] = username, ["passwd"] = password, ["session"] = "Chat", ["format"] = "sid",
             ["enable_syno_token"] = "yes"
         };
-        if (!string.IsNullOrWhiteSpace(otpCode)) fields["otp_code"] = otpCode;
         try
         {
             var authentication = await SendAsync("SYNO.API.Auth", "login", 6, fields, false, ct);
@@ -377,7 +376,7 @@ public sealed partial class SynologyChatClient : IDisposable
                 var code = envelope.ValueKind == JsonValueKind.Object && envelope.TryGetProperty("error", out var error) ?
                     (int)ReadLong(error, "code", 0) : 0;
                 var message = api == "SYNO.API.Auth" && method == "login" && code is 403 or 404 ?
-                    "OTP 확인이 필요하거나 코드가 올바르지 않습니다." :
+                    "이 계정으로 로그인할 수 없습니다. 관리자에게 계정 설정을 문의해 주세요." :
                     api.StartsWith("SYNO.Chat.", StringComparison.Ordinal) ? code switch
                     {
                         401 => "해당 대화에 접근할 수 없습니다.",

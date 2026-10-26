@@ -74,7 +74,7 @@ https://chat.tempchain.myds.me
 - **Android:** Synology Inc.가 배포한 [Google Play 앱](https://play.google.com/store/apps/details?id=com.synology.dschat)을 사용합니다.
 - **iPhone / iPad:** Synology Inc.가 배포한 [App Store 앱](https://apps.apple.com/kr/app/synology-chat/id1121875041)을 사용합니다.
 
-Windows 앱은 WPF 로그인 화면에서 비밀번호와 필요한 OTP를 입력받아 NAS에 직접 인증합니다. 비밀번호는 설정 파일에 저장하지 않으며 SID는 메모리에서만 유지합니다. 모바일 알림은 사무실 Wi-Fi와 실제 원격 접속 조건에서 각각 테스트하고, VPN·푸시 도달 여부를 결과로 남깁니다.
+Windows 앱은 WPF 로그인 화면에서 사용자 이름과 비밀번호를 입력받아 NAS에 직접 인증합니다. 비밀번호는 설정 파일에 저장하지 않으며 SID는 메모리에서만 유지합니다. 모바일 알림은 사무실 Wi-Fi와 실제 원격 접속 조건에서 각각 테스트하고, VPN·푸시 도달 여부를 결과로 남깁니다.
 
 ## 5. 선택: ERP 알림과 봇 연동
 

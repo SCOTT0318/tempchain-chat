@@ -5,6 +5,7 @@ SetDatablockOptimize on
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
+!include "nsDialogs.nsh"
 
 !ifndef APP_VERSION
   !error "APP_VERSION is required"
@@ -41,6 +42,7 @@ VIAddVersionKey /LANG=1042 "ProductVersion" "${APP_VERSION}"
 !define MUI_WELCOMEPAGE_TITLE "TempChain Chat 설치"
 !define MUI_WELCOMEPAGE_TEXT "현재 Windows 사용자에게 TempChain Chat을 설치합니다.$\r$\n$\r$\n실행 중인 TempChain Chat이 있다면 알림 영역에서 종료해 주세요.$\r$\n$\r$\n기존 NAS 계정으로 로그인하며, Windows 자동 실행은 앱 설정에서 직접 선택할 수 있습니다."
 !insertmacro MUI_PAGE_WELCOME
+Page custom ShortcutOptionsCreate ShortcutOptionsLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\TempChain.Chat.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "TempChain Chat 실행"
@@ -51,9 +53,38 @@ VIAddVersionKey /LANG=1042 "ProductVersion" "${APP_VERSION}"
 !insertmacro MUI_LANGUAGE "Korean"
 
 Var PayloadDeleteFailed
+Var DesktopShortcutChoice
+Var StartShortcutChoice
+Var DesktopShortcutCheckbox
+Var StartShortcutCheckbox
+
+Function ShortcutOptionsCreate
+  !insertmacro MUI_HEADER_TEXT "바로가기 설정" "앱을 편하게 열 수 있는 위치를 선택하세요."
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  ${NSD_CreateLabel} 0 8u 100% 28u "원하는 바로가기를 선택해 주세요.$\r$\n나중에 앱 설정에서 없는 아이콘을 다시 추가할 수 있습니다."
+  Pop $0
+  ${NSD_CreateCheckbox} 8u 50u 90% 16u "바탕화면에 바로가기 만들기"
+  Pop $DesktopShortcutCheckbox
+  ${NSD_SetState} $DesktopShortcutCheckbox $DesktopShortcutChoice
+  ${NSD_CreateCheckbox} 8u 80u 90% 16u "시작 메뉴에 바로가기 만들기"
+  Pop $StartShortcutCheckbox
+  ${NSD_SetState} $StartShortcutCheckbox $StartShortcutChoice
+  nsDialogs::Show
+FunctionEnd
+
+Function ShortcutOptionsLeave
+  ${NSD_GetState} $DesktopShortcutCheckbox $DesktopShortcutChoice
+  ${NSD_GetState} $StartShortcutCheckbox $StartShortcutChoice
+FunctionEnd
 
 Function .onInit
   SetShellVarContext current
+  StrCpy $DesktopShortcutChoice ${BST_CHECKED}
+  StrCpy $StartShortcutChoice ${BST_CHECKED}
 check_running_app:
   ; Include hidden/tray windows, including a development or portable instance.
   ; Never terminate the employee's running session from the installer.
@@ -89,9 +120,13 @@ Section "TempChain Chat" MainSection
   IfErrors install_failed
 
   CreateDirectory "$SMPROGRAMS\TempChain Chat"
-  CreateShortcut "$SMPROGRAMS\TempChain Chat\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
+  ${If} $StartShortcutChoice == ${BST_CHECKED}
+    CreateShortcut "$SMPROGRAMS\TempChain Chat\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
+  ${EndIf}
   CreateShortcut "$SMPROGRAMS\TempChain Chat\제거.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
+  ${If} $DesktopShortcutChoice == ${BST_CHECKED}
+    CreateShortcut "$DESKTOP\TempChain Chat.lnk" "$INSTDIR\TempChain.Chat.exe" "" "$INSTDIR\TempChain.Chat.exe" 0
+  ${EndIf}
 
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TempChainChat" "DisplayName" "TempChain Chat"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TempChainChat" "DisplayVersion" "${APP_VERSION}"

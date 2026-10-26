@@ -21,12 +21,12 @@ internal static class ApiTests
         {
             var handler = LoginHandler();
             using var client = new SynologyChatClient(Server, handler);
-            await client.LoginAsync("박범준+ops&", Password, "123456");
+            await client.LoginAsync("박범준+ops&", Password);
             Equal(7L, client.CurrentUser!.Id);
             Equal("박범준", client.CurrentUser.DisplayName);
             Equal("박범준+ops&", handler.Requests[1].Fields["account"]);
             Equal(Password, handler.Requests[1].Fields["passwd"]);
-            Equal("123456", handler.Requests[1].Fields["otp_code"]);
+            Check(!handler.Requests[1].Fields.ContainsKey("otp_code"));
             Equal("Chat", handler.Requests[1].Fields["session"]);
             foreach (var request in handler.Requests)
             {
@@ -164,7 +164,7 @@ internal static class ApiTests
             var handler = new ScriptedHttpHandler().Expect("SYNO.API.Info", "query", Discovery())
                 .Expect("SYNO.API.Auth", "login", new { success = false, error = new { code = 403, detail = Password + Sid + Token } });
             using var client = new SynologyChatClient(Server, handler);
-            var error = await ThrowsAsync<SynologyApiException>(() => client.LoginAsync("park", Password, "123456"));
+            var error = await ThrowsAsync<SynologyApiException>(() => client.LoginAsync("park", Password));
             Equal(403, error.Code);
             AssertSafe(error);
             Check(client.CurrentUser is null);

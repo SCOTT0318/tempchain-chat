@@ -20,17 +20,24 @@ internal static class NotificationTests
         });
         Run("Notification tracker resets baseline between sessions",()=>{var t=new NotificationTracker();t.Observe(new[]{Room(5,100)});t.Reset();Equal(0,t.Observe(new[]{Room(5,200)}).Count);});
         Run("Simultaneous updates preserve chronological order",()=>{var t=new NotificationTracker();t.Observe(new[]{Room(5,100),Room(6,100)});var changes=t.Observe(new[]{Room(5,300),Room(6,200)});Check(changes.Select(r=>r.Id).SequenceEqual(new[]{6L,5L}));});
-        Run("Legacy settings receive notification defaults",()=>{var s=JsonSerializer.Deserialize<AppSettings>("{\"MinimizeToTray\":false}")!;Check(s.EnableNotifications&&s.AnimateNotifications&&!s.NotificationSound);Equal(5,s.NotificationDurationSeconds);Check(!s.MinimizeToTray);});
-        Run("Notification duration normalizes corrupt bounds",()=>{Equal(1,(new AppSettings{NotificationDurationSeconds=-10}).Normalize().NotificationDurationSeconds);Equal(60,(new AppSettings{NotificationDurationSeconds=999}).Normalize().NotificationDurationSeconds);});
+        Run("Legacy settings receive notification defaults",()=>{var s=JsonSerializer.Deserialize<AppSettings>("{\"MinimizeToTray\":false,\"EnableNotifications\":false,\"NotificationDurationSeconds\":12}")!.Normalize();Check(s.ShowNotificationSender);Equal(5,s.NotificationDurationSeconds);Check(!s.MinimizeToTray);});
+        Run("Notification duration normalizes old and corrupt bounds",()=>{Equal(3,(new AppSettings{NotificationDurationSeconds=-10}).Normalize().NotificationDurationSeconds);Equal(5,(new AppSettings{NotificationDurationSeconds=999}).Normalize().NotificationDurationSeconds);Equal(4,(new AppSettings{NotificationDurationSeconds=4}).Normalize().NotificationDurationSeconds);});
         Run("Saving invalid duration cannot overwrite existing settings",()=>{
             var root=Path.Combine(Path.GetTempPath(),"TempChain.Chat.Tests",Guid.NewGuid().ToString("N"));
             try { var store=new SettingsStore(root);store.Save(new AppSettings());var original=File.ReadAllText(store.SettingsPath);Throws<ArgumentOutOfRangeException>(()=>store.Save(new AppSettings{NotificationDurationSeconds=0}));Equal(original,File.ReadAllText(store.SettingsPath)); }
             finally {if(Directory.Exists(root))Directory.Delete(root,true);}
         });
         Run("Custom notification settings round-trip without credentials",()=>{
-            var settings=new AppSettings{EnableNotifications=false,AnimateNotifications=false,NotificationSound=true,NotificationDurationSeconds=12};
+            var settings=new AppSettings{ShowNotificationSender=false,NotificationDurationSeconds=3};
             Equal(settings,JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings))!);
             Check(!JsonSerializer.Serialize(settings).Contains("password",StringComparison.OrdinalIgnoreCase));
+        });
+        Run("Hidden sender notification reveals neither employee nor room name",()=>{
+            var hidden=NotificationContent.Create("홍길동", "홍길동 개인 대화",false);
+            Check(!hidden.Title.Contains("홍길동")&&!hidden.Detail.Contains("홍길동"));
+            Check(!hidden.Detail.Contains("개인 대화"));
+            var shown=NotificationContent.Create("홍길동","개발팀",true);
+            Equal("홍길동",shown.Title);Check(shown.Detail.Contains("개발팀"));
         });
     }
 }

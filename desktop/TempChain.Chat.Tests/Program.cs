@@ -40,7 +40,7 @@ internal static class Program
                     Equal(legacyJson, File.ReadAllText(store.SettingsPath));
                     store.Save(store.Load());
                     using var serialized = JsonDocument.Parse(File.ReadAllText(store.SettingsPath));
-                    Equal(6, serialized.RootElement.EnumerateObject().Count());
+                    Equal(4, serialized.RootElement.EnumerateObject().Count());
                     Check(!serialized.RootElement.TryGetProperty("ServerUrl", out _));
                     Check(serialized.RootElement.TryGetProperty("MinimizeToTray", out _));
                     Check(serialized.RootElement.TryGetProperty("StartWithWindows", out _));
