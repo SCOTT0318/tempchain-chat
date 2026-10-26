@@ -23,7 +23,7 @@ public sealed class SettingsStore
             if (new FileInfo(SettingsPath).Length > 64 * 1024) throw new JsonException();
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8));
             if (settings is null) throw new JsonException();
-            return settings;
+            return settings.Normalize();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -34,6 +34,8 @@ public sealed class SettingsStore
 
     public void Save(AppSettings settings)
     {
+        if (settings.NotificationDurationSeconds is < 1 or > 60)
+            throw new ArgumentOutOfRangeException(nameof(settings), "알림 시간은 1~60초입니다.");
         Directory.CreateDirectory(BaseDirectory);
         var temporary = SettingsPath + ".tmp";
         var content = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });

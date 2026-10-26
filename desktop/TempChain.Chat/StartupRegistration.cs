@@ -17,6 +17,7 @@ public static class StartupRegistration
         return $"\"{exePath}\" --minimized";
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public static void Apply(bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(KeyPath, writable: true);

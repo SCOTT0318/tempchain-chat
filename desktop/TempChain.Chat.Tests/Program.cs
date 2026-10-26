@@ -10,7 +10,7 @@ internal static class Program
         Run("Fixed company connection is valid HTTPS", () => Check(NavigationPolicy.TryGetServerUri(ServerConfiguration.DefaultServerUrl, out _)));
         Run("Startup command quotes paths with spaces and Korean", () =>
         {
-            const string path = @"C:\Program Files\템프체인\TempChain.Chat.exe";
+            var path = OperatingSystem.IsWindows() ? @"C:\Program Files\템프체인\TempChain.Chat.exe" : "/opt/템프체인 Chat/TempChain.Chat.exe";
             Equal($"\"{path}\" --minimized", StartupRegistration.BuildCommand(path));
         });
         foreach (var path in new[] { "", @"relative\chat.exe", "C:\\Chat.exe\" --argument", "C:\\Chat.exe\r\n" })
@@ -40,7 +40,7 @@ internal static class Program
                     Equal(legacyJson, File.ReadAllText(store.SettingsPath));
                     store.Save(store.Load());
                     using var serialized = JsonDocument.Parse(File.ReadAllText(store.SettingsPath));
-                    Equal(2, serialized.RootElement.EnumerateObject().Count());
+                    Equal(6, serialized.RootElement.EnumerateObject().Count());
                     Check(!serialized.RootElement.TryGetProperty("ServerUrl", out _));
                     Check(serialized.RootElement.TryGetProperty("MinimizeToTray", out _));
                     Check(serialized.RootElement.TryGetProperty("StartWithWindows", out _));
@@ -61,6 +61,8 @@ internal static class Program
             }
         });
         await ApiTests.RunAllAsync();
+        await RoomTests.RunAllAsync();
+        NotificationTests.RunAll();
         Console.WriteLine($"{_passed} passed, {_failed} failed");
         return _failed == 0 ? 0 : 1;
     }
