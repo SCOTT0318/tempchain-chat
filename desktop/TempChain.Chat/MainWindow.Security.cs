@@ -78,8 +78,9 @@ public partial class MainWindow
         LockConfirmPanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockSubmitButton.Content = setup ? "암호 설정 및 시작" : "잠금 해제";
         LockErrorText.Text = "";
-        LockModePanel.Visibility = setup || string.IsNullOrEmpty(savedLogin?.LockMode) ? Visibility.Visible : Visibility.Collapsed;
-        lockInputMode = savedLogin?.LockMode is "pin6" or "text" ? savedLogin.LockMode : "pin4";
+        LockModePanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
+        lockInputMode = !setup && string.IsNullOrEmpty(savedLogin?.LockMode) ? "text" :
+            savedLogin?.LockMode is "pin6" or "text" ? savedLogin.LockMode : "pin4";
         Pin4Option.IsChecked = lockInputMode == "pin4";
         Pin6Option.IsChecked = lockInputMode == "pin6";
         TextPasswordOption.IsChecked = lockInputMode == "text";
@@ -90,7 +91,7 @@ public partial class MainWindow
 
     private void LockMode_Changed(object sender, RoutedEventArgs e)
     {
-        if (LockPinInput is null || AppLockPasswordBox is null) return;
+        if (!settingLockPassword || LockPinInput is null || AppLockPasswordBox is null) return;
         lockInputMode = Pin6Option.IsChecked == true ? "pin6" : TextPasswordOption.IsChecked == true ? "text" : "pin4";
         ConfigureLockInput();
         FocusLockInput();
@@ -104,7 +105,9 @@ public partial class MainWindow
         LockPinInput.Visibility = LockPinConfirmInput.Visibility = numeric ? Visibility.Visible : Visibility.Collapsed;
         AppLockPasswordBox.Visibility = AppLockConfirmBox.Visibility = numeric ? Visibility.Collapsed : Visibility.Visible;
         AppLockPasswordBox.Clear(); AppLockConfirmBox.Clear();
-        LockInputHint.Text = numeric ? $"숫자 {length}자리를 입력해 주세요." : "문자를 포함해 6자 이상 입력해 주세요.";
+        LockInputHint.Text = !settingLockPassword && string.IsNullOrEmpty(savedLogin?.LockMode)
+            ? "기존에 설정한 암호를 입력해 주세요."
+            : numeric ? $"숫자 {length}자리를 입력해 주세요." : "문자를 포함해 6자 이상 입력해 주세요.";
         LockErrorText.Text = "";
     }
 

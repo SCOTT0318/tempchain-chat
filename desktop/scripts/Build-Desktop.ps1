@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.2.2',
+    [string]$Version = '1.2.3',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller

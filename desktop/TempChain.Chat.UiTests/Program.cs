@@ -69,7 +69,7 @@ class Program {
   six.Password="012345"; ((PinInput)main.FindName("LockPinConfirmInput")).Password="012345";
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
   Invoke(main,"LockApp");
-  if(((PinInput)main.FindName("LockPinInput")).Length!=6) throw new Exception("saved six-digit mode not restored");
+  if(((PinInput)main.FindName("LockPinInput")).Length!=6 || ((StackPanel)main.FindName("LockModePanel")).Visibility!=Visibility.Collapsed) throw new Exception("saved six-digit mode not restored without selector");
   Render(main,Path.Combine(root,"lock-pin6.png"));
   ((PinInput)main.FindName("LockPinInput")).Password="012345";
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
@@ -81,10 +81,13 @@ class Program {
   new PersistentLoginStore(root).Save(legacy);
   typeof(MainWindow).GetField("savedLogin",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(main,legacy);
   Invoke(main,"ShowSecurityGate",false);
-  if(((StackPanel)main.FindName("LockModePanel")).Visibility!=Visibility.Visible) throw new Exception("legacy unlock requires mode selection");
-  ((PinInput)main.FindName("LockPinInput")).Password="0123";
+  if(((StackPanel)main.FindName("LockModePanel")).Visibility!=Visibility.Collapsed) throw new Exception("legacy unlock must not show mode selection");
+  ((PasswordBox)main.FindName("AppLockPasswordBox")).Password="0123";
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
   if(new PersistentLoginStore(root).Load()!.LockMode!="pin4") throw new Exception("legacy mode migration failed");
+  Invoke(main,"LockApp");
+  if(((PinInput)main.FindName("LockPinInput")).Length!=4 || ((StackPanel)main.FindName("LockModePanel")).Visibility!=Visibility.Collapsed) throw new Exception("migrated unlock must restore four slots without selection");
+  Render(main,Path.Combine(root,"legacy-migrated-lock.png"));
   Console.WriteLine("PASS WPF: 4/6/text selection; digit slots; digit and length validation; saved mode restoration.");
   Console.WriteLine("PASS WPF: initial password setup persists login; wrong password keeps lock; correct password unlocks without NAS logout.");
   var contact=new ContactItem(new ChatUser(7,"fixture-user","박범준 사원",Email:"fixture@example.test"));
