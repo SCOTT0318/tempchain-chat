@@ -21,12 +21,12 @@ services:
         import { readFile, stat } from 'node:fs/promises';
         import { createHash } from 'node:crypto';
         import { pathToFileURL } from 'node:url';
-        
+
         const groupDenied = 460;
         const directoryUnavailable = 461;
         const keyFor = value => createHash('sha256').update(value).digest('hex');
         const accountFor = user => user?.username || user?.user_name || user?.name || '';
-        
+
         export function directoryMembers(snapshot, now = Date.now()) {
           if (snapshot?.version !== 1 || !Number.isSafeInteger(snapshot.generatedAt) ||
               snapshot.generatedAt > now + 30000 || now - snapshot.generatedAt > 180000 || !Array.isArray(snapshot.users))
@@ -39,7 +39,7 @@ services:
           }
           return members;
         }
-        
+
         export function enrichUser(user, members) {
           const identity = members.get(accountFor(user).toLowerCase());
           if (!identity) return undefined;
@@ -47,7 +47,7 @@ services:
             user_props: { ...user.user_props, description: identity.description,
               email: identity.email || user.email || user.user_props?.email || '' } };
         }
-        
+
         export function createAccessGateway({ snapshotPath = '/directory/identity.json', upstream = 'http://192.168.0.7:3000',
           readDirectory = async () => {
             if ((await stat(snapshotPath)).size > 2097152) throw new Error('directory_unavailable');
@@ -148,7 +148,7 @@ services:
             } catch { if (!response.headersSent) error(directoryUnavailable); else response.destroy(); }
           });
         }
-        
+
         export async function proxyRequest({ upstream, path, method, headers, body }) {
           return new Promise((resolve, reject) => {
             const destination = new URL(path, upstream);
@@ -168,7 +168,7 @@ services:
             request.on('error', reject); request.end(body);
           });
         }
-        
+
         if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
           createAccessGateway({ snapshotPath: process.env.DIRECTORY_PATH || '/directory/identity.json',
             upstream: process.env.CHAT_UPSTREAM || 'http://192.168.0.7:3000' }).listen(8080, '0.0.0.0');
