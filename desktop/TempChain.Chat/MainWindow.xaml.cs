@@ -27,7 +27,6 @@ public partial class MainWindow : Window
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private Forms.NotifyIcon? tray;
     private bool exitRequested;
-    private bool firstHide = true;
     private bool signingIn;
     private bool sending;
     private bool openingConversation;
@@ -260,7 +259,7 @@ public partial class MainWindow : Window
                     }
                 }
             }
-            StatusText.Text = $"연락처 {Contacts.Count}명";
+            StatusText.Text = "";
         }
         catch (OperationCanceledException) { }
         catch (SynologyApiException ex) when (ex.Code is 106 or 107 or 119 && savedLogin is not null)
@@ -332,7 +331,7 @@ public partial class MainWindow : Window
         }
         messagesChannelId = channelId;
         MessageEmptyPanel.Visibility = Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyHeadingText.Text = "아직 메시지가 없습니다";
+        EmptyHeadingText.Text = "메시지 없음";
         EmptyDetailText.Text = "";
     }
 
@@ -371,11 +370,11 @@ public partial class MainWindow : Window
         HideConversationButton.IsEnabled = false;
         UpdateRoomActions();
         EncryptedNotice.Visibility = Visibility.Collapsed;
-        ChatTitleText.Text = "우리 팀과 대화를 시작해 보세요";
+        ChatTitleText.Text = "대화";
         ChatDetailText.Text = "";
         MessageEmptyPanel.Visibility = Visibility.Visible;
-        EmptyHeadingText.Text = "대화를 선택하세요";
-        EmptyDetailText.Text = "연락처에서 대화를 시작하세요.";
+        EmptyHeadingText.Text = "";
+        EmptyDetailText.Text = "";
     }
 
     private async void HideConversation_Click(object sender, RoutedEventArgs e)
@@ -409,7 +408,7 @@ public partial class MainWindow : Window
                 ClearSelection();
             }
             await RefreshChatAsync(false, waitForGate: true);
-            StatusText.Text = "내 대화 목록에서 숨겼습니다. 메시지는 그대로 유지됩니다.";
+            StatusText.Text = "대화를 숨겼습니다.";
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -531,7 +530,7 @@ public partial class MainWindow : Window
     {
         var count = showingContacts ? CollectionViewSource.GetDefaultView(Contacts).Cast<object>().Count() :
             CollectionViewSource.GetDefaultView(Conversations).Cast<object>().Count();
-        DirectoryEmptyText.Text = showingContacts ? "표시할 연락처가 없습니다." : "대화가 없습니다. 연락처에서 시작하세요.";
+        DirectoryEmptyText.Text = showingContacts ? "연락처 없음" : "대화 없음";
         DirectoryEmptyText.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -607,7 +606,7 @@ public partial class MainWindow : Window
         var active = client;
         if (managingRoom || active is null || ConversationsList.SelectedItem is not ConversationItem item) return;
         if (new CloseRoomDialog(item.Data.Name) { Owner = this }.ShowDialog() != true || active != client) return;
-        await RunRoomOperationAsync(active, async (api, ct) => { await api.CloseRoomAsync(item.Id, item.Data.Name, ct); return null; }, "전체 채팅방을 닫았습니다. 기록의 보존·삭제는 서버 정책을 따릅니다.");
+        await RunRoomOperationAsync(active, async (api, ct) => { await api.CloseRoomAsync(item.Id, item.Data.Name, ct); return null; }, "채팅방을 닫았습니다.");
     }
 
     private async Task RunRoomOperationAsync(SynologyChatClient active,
@@ -708,7 +707,6 @@ public partial class MainWindow : Window
         AppUpdateManager.Instance.Configure(settings.AutoUpdate);
         notification?.Close(); notification = null;
         if (dialog.ChangeLockPasswordRequested) ChangeLockPassword_Click(this, new RoutedEventArgs());
-        if (dialog.LockRequested) LockApp();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshChatAsync(true, waitForGate: true);
@@ -744,15 +742,7 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate(); Topmost = true; Topmost = false; Focus();
     }
-    public void HideToTray(bool showBalloon = true)
-    {
-        Hide();
-        if (showBalloon && firstHide && tray is not null)
-        {
-            tray.ShowBalloonTip(4000, "TChat", "알림 영역에서 계속 실행 중입니다.", Forms.ToolTipIcon.Info);
-            firstHide = false;
-        }
-    }
+    public void HideToTray(bool showBalloon = false) => Hide();
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         if (!exitRequested && settings.MinimizeToTray) { e.Cancel = true; HideToTray(); return; }
@@ -783,7 +773,7 @@ public sealed class ContactItem
     public ChatUser User { get; }
     public bool IsOwn { get; }
     public string Title => (string.IsNullOrWhiteSpace(User.DisplayName) ? User.UserName : User.DisplayName) + (IsOwn ? " (나)" : "");
-    public string Subtitle => string.IsNullOrWhiteSpace(User.Email) ? "이메일 미등록" : User.Email;
+    public string Subtitle => User.Email;
     public string Initial => string.IsNullOrEmpty(Title) ? "T" : Title[..1].ToUpperInvariant();
     public ContactItem(ChatUser user, bool isOwn = false) { User = user; IsOwn = isOwn; }
 }

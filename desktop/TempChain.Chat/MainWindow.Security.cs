@@ -73,8 +73,7 @@ public partial class MainWindow
         foreach (var window in OwnedWindows.Cast<Window>().ToArray()) window.Close();
         ChatView.Visibility = LoginView.Visibility = Visibility.Collapsed;
         LockHeading.Text = setup ? "앱 잠금 암호 설정" : "TChat 잠금";
-        LockDescription.Text = setup ? "" : "잠금 암호를 입력해 주세요.";
-        LockDescription.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
+        LockPasswordLabel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockConfirmPanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockSubmitButton.Content = setup ? "암호 설정 및 시작" : "잠금 해제";
         LockErrorText.Text = "";
@@ -105,9 +104,6 @@ public partial class MainWindow
         LockPinInput.Visibility = LockPinConfirmInput.Visibility = numeric ? Visibility.Visible : Visibility.Collapsed;
         AppLockPasswordBox.Visibility = AppLockConfirmBox.Visibility = numeric ? Visibility.Collapsed : Visibility.Visible;
         AppLockPasswordBox.Clear(); AppLockConfirmBox.Clear();
-        LockInputHint.Text = !settingLockPassword && string.IsNullOrEmpty(savedLogin?.LockMode)
-            ? "기존에 설정한 암호를 입력해 주세요."
-            : numeric ? $"숫자 {length}자리를 입력해 주세요." : "문자를 포함해 6자 이상 입력해 주세요.";
         LockErrorText.Text = "";
     }
 
@@ -121,6 +117,8 @@ public partial class MainWindow
     {
         if (client is not null && !securityLocked && savedLogin is not null) ShowSecurityGate(false);
     }
+
+    private void Lock_Click(object sender, RoutedEventArgs e) => LockApp();
 
     private void UnlockApp()
     {

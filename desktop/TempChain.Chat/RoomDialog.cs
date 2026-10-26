@@ -39,7 +39,7 @@ public sealed class RoomDialog : Window
             header.Children.Add(new Label { Content = "설명 (선택)", Target = purpose }); header.Children.Add(purpose);
             publicRoom.IsEnabled = allowPublic; header.Children.Add(publicRoom);
         }
-        header.Children.Add(new TextBlock { Text = allowInvites ? "초대할 직원 선택" : "직원 초대 권한이 없어 본인만 참여하는 방을 만듭니다.", TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brushes.SlateGray, Margin = new Thickness(0,8,0,12) });
+        header.Children.Add(new TextBlock { Text = allowInvites ? "참여자" : "초대 권한 없음", TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brushes.SlateGray, Margin = new Thickness(0,8,0,12) });
         var search = new TextBox { ToolTip = "직원 이름 검색", Margin = new Thickness(0,0,0,10) };
         AutomationProperties.SetName(search, "초대할 직원 검색");
         header.Children.Add(search); grid.Children.Add(header);
@@ -85,7 +85,7 @@ public sealed class CloseRoomDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ResizeMode = ResizeMode.NoResize; ShowInTaskbar = false;
         var panel = new StackPanel { Margin = new Thickness(26) };
         panel.Children.Add(new TextBlock { Text = "전체 참여자에게 영향을 줍니다", FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Firebrick });
-        panel.Children.Add(new TextBlock { Text = "모든 참여자가 이 방을 사용할 수 없게 됩니다. 기록은 서버 보존 정책에 따릅니다.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,16,0,14), LineHeight = 23 });
+        panel.Children.Add(new TextBlock { Text = "모든 참여자가 이 방을 사용할 수 없게 됩니다.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,16,0,14), LineHeight = 23 });
         panel.Children.Add(new TextBlock { Text = "확인할 방 이름: " + roomName, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Bold, Margin = new Thickness(0,0,0,10) });
         var input = new TextBox(); AutomationProperties.SetName(input, "삭제할 채팅방 이름을 그대로 입력"); panel.Children.Add(input);
         var consent = new CheckBox { Content = "다른 참여자에게도 영향을 주는 것을 이해했습니다." }; panel.Children.Add(consent);

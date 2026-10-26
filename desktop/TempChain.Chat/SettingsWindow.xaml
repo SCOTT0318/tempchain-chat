@@ -20,10 +20,9 @@
 
       </StackPanel></Border>
       <Border Background="White" BorderBrush="#E1E9F2" BorderThickness="1" CornerRadius="16" Padding="22,18" Margin="0,0,0,14"><StackPanel>
-        <TextBlock Text="로그인 유지 및 앱 잠금" FontSize="15" FontWeight="SemiBold"/>
-        <TextBlock Text="로그인은 재시작·업데이트 후에도 유지됩니다. 앱을 다시 열면 잠금 암호로 보호합니다." TextWrapping="Wrap" Foreground="{StaticResource MutedInk}" FontSize="12" Margin="0,10,0,16"/>
-        <Grid Margin="0,0,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="사용하지 않을 때 자동 잠금" VerticalAlignment="Center"/><TextBox x:Name="AutoLockMinutesBox" Grid.Column="1" MaxLength="2" AutomationProperties.Name="자동 잠금 시간 (1~60분)"/><TextBlock Grid.Column="2" Text="분" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid>
-        <WrapPanel><Button Content="잠금 암호 변경" Click="ChangeLock_Click"/><Button Content="지금 잠금 (Ctrl+L)" Click="LockNow_Click"/></WrapPanel>
+        <TextBlock Text="앱 잠금" Margin="0,0,0,16" FontSize="15" FontWeight="SemiBold"/>
+        <Grid Margin="0,0,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="자동 잠금" VerticalAlignment="Center"/><TextBox x:Name="AutoLockMinutesBox" Grid.Column="1" MaxLength="2" AutomationProperties.Name="자동 잠금 시간 (1~60분)"/><TextBlock Grid.Column="2" Text="분" VerticalAlignment="Center" Margin="8,0,0,0"/></Grid>
+        <WrapPanel><Button Content="잠금 암호 변경" Click="ChangeLock_Click"/></WrapPanel>
       </StackPanel></Border>
       <Border Background="White" BorderBrush="#E1E9F2" BorderThickness="1" CornerRadius="16" Padding="22,18"><StackPanel><TextBlock Text="바로가기" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,16"/>
         <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock Text="바탕화면" FontWeight="SemiBold"/><TextBlock x:Name="DesktopShortcutStatus" FontSize="11" Foreground="{StaticResource MutedInk}" Margin="0,4,0,0"/></StackPanel><Button x:Name="DesktopShortcutButton" Content="추가" Grid.Column="1" Click="DesktopShortcut_Click" Padding="20,8" Margin="0" AutomationProperties.Name="바탕화면 바로가기 추가"/></Grid>

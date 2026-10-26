@@ -14,7 +14,6 @@ public partial class SettingsWindow : Window
     private NotificationWindow? preview;
     public AppSettings Result { get; private set; }
     public bool ChangeLockPasswordRequested { get; private set; }
-    public bool LockRequested { get; private set; }
 
     public SettingsWindow(SettingsStore store, AppSettings current)
     {
@@ -51,11 +50,6 @@ public partial class SettingsWindow : Window
     {
         if (!SaveSettings()) return;
         ChangeLockPasswordRequested = true; DialogResult = true;
-    }
-    private void LockNow_Click(object sender, RoutedEventArgs e)
-    {
-        if (!SaveSettings()) return;
-        LockRequested = true; DialogResult = true;
     }
 
     private void RefreshUpdate()

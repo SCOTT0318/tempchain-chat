@@ -28,6 +28,8 @@ class Program {
   var fixture = AppLockPassword.Create("fixture-user","fixture-nas-password","fixture-lock-password");
   new PersistentLoginStore(root).Save(fixture);
   var main = new MainWindow(store);
+  if(Grid.GetColumn((Button)main.FindName("AccountLogoutButton"))!=2 || ((Button)main.FindName("AccountLogoutButton")).Parent!=main.FindName("MyAccountPanel")) throw new Exception("logout must be on right of account");
+  if(Grid.GetRow((Button)main.FindName("SettingsRailButton"))!=5 || Grid.GetRow((Button)main.FindName("LockRailButton"))!=4) throw new Exception("settings must be below lock at bottom of rail");
   Invoke(main,"RestoreSavedLogin");
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("restart did not lock");
   if(((Grid)main.FindName("ChatView")).Visibility!=Visibility.Collapsed) throw new Exception("chat exposed while locked");
@@ -38,7 +40,7 @@ class Program {
   Invoke(main,"ShowSecurityGate",true);
   ((RadioButton)main.FindName("Pin4Option")).IsChecked=true;
   if(((PinInput)main.FindName("LockPinInput")).Children.Count!=4) throw new Exception("4-digit selection must show four slots");
-  if(((TextBlock)main.FindName("LockDescription")).Visibility!=Visibility.Collapsed) throw new Exception("setup description must be hidden");
+  if(main.FindName("LockDescription") is not null || main.FindName("LockInputHint") is not null) throw new Exception("redundant lock instructions remain");
   var markup=File.ReadAllText("desktop/TempChain.Chat/MainWindow.xaml");
   if(markup.Contains("NAS 계정으로 다시 로그인")) throw new Exception("removed re-login button remains");
   if(((StackPanel)main.FindName("LockConfirmPanel")).Visibility!=Visibility.Visible) throw new Exception("setup confirmation absent");
@@ -94,6 +96,15 @@ class Program {
   if(contact.Title!="박범준 사원" || contact.Subtitle!="fixture@example.test") throw new Exception("contact display mismatch");
   Console.WriteLine("PASS WPF: duration selection autosaves; reopen preserves 3 sec; lock time preserved; saved login starts locked; chat and NAS login hidden; setup confirmation present; name/title and email bound.");
   Console.WriteLine("Rendered: "+root);
+  typeof(MainWindow).GetField("securityLocked",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(main,false);
+  ((Border)main.FindName("LockOverlay")).Visibility=Visibility.Collapsed;
+  ((Grid)main.FindName("ChatView")).Visibility=Visibility.Visible;
+  ((TextBlock)main.FindName("MyNameText")).Text="박범준 사원";
+  Render(main,Path.Combine(root,"main-navigation.png"));
+  main.Width=900; main.Height=620;
+  Render(main,Path.Combine(root,"main-navigation-small.png"));
+  ((Button)main.FindName("LockRailButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+  if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("rail lock button did not lock app");
   main.Close(); app.Shutdown(); return 0;
  }
  static void Invoke(object target,string name,params object[] args)=>target.GetType().GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(target,args);
