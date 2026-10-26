@@ -55,7 +55,8 @@ public partial class MainWindow : Window
         settings = store.Load();
         DataContext = this;
         CollectionViewSource.GetDefaultView(Conversations).Filter = item => MatchesSearch(((ConversationItem)item).Title);
-        CollectionViewSource.GetDefaultView(Contacts).Filter = item => MatchesSearch(((ContactItem)item).Title);
+        CollectionViewSource.GetDefaultView(Contacts).Filter = item =>
+            MatchesSearch(((ContactItem)item).Title) || MatchesSearch(((ContactItem)item).Subtitle);
         ConfigureConversationMenu();
         ConfigureRoomMenu();
         try { Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/app.ico")); }
@@ -752,7 +753,7 @@ public sealed class ContactItem
     public ChatUser User { get; }
     public bool IsOwn { get; }
     public string Title => (string.IsNullOrWhiteSpace(User.DisplayName) ? User.UserName : User.DisplayName) + (IsOwn ? " (나)" : "");
-    public string Subtitle => IsOwn ? "내 계정 · " + User.UserName : User.UserName;
+    public string Subtitle => string.IsNullOrWhiteSpace(User.Email) ? "이메일 미등록" : User.Email;
     public string Initial => string.IsNullOrEmpty(Title) ? "T" : Title[..1].ToUpperInvariant();
     public ContactItem(ChatUser user, bool isOwn = false) { User = user; IsOwn = isOwn; }
 }

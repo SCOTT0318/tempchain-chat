@@ -88,12 +88,13 @@ public sealed partial class SynologyChatClient : IDisposable
                 throw new SynologyApiException(0, "로그인한 Chat 사용자 정보를 확인하지 못했습니다.");
             var currentId = ReadLong(signedInUser, "user_id", "id");
             var signedInName = ReadString(signedInUser, "username", "user_name", "name");
-            var signedInDisplay = ReadString(signedInUser, "nickname", "display_name");
+            var signedInDisplay = ReadProfileString(signedInUser, "nickname", "display_name", "displayName", "full_name", "real_name");
             var employees = await GetUsersAsync(ct);
             CurrentUser = employees.FirstOrDefault(user => user.Id == currentId);
             if (CurrentUser is null && !string.IsNullOrWhiteSpace(signedInName))
                 CurrentUser = new ChatUser(currentId, signedInName,
-                    string.IsNullOrWhiteSpace(signedInDisplay) ? signedInName : signedInDisplay);
+                    string.IsNullOrWhiteSpace(signedInDisplay) ? signedInName : signedInDisplay,
+                    Email: ReadProfileString(signedInUser, "email"));
             if (CurrentUser is null) throw new SynologyApiException(0, "로그인한 Chat 사용자 정보를 확인하지 못했습니다.");
         }
         catch
@@ -114,10 +115,11 @@ public sealed partial class SynologyChatClient : IDisposable
             var id = ReadLong(item, "user_id", "id");
             var name = ReadString(item, "username", "user_name", "name");
             if (id <= 0 || string.IsNullOrWhiteSpace(name)) continue;
-            var display = ReadString(item, "nickname", "display_name", "displayName");
+            var display = ReadProfileString(item, "nickname", "display_name", "displayName", "full_name", "real_name");
             var active = ReadBool(item, true, "is_active", "active", "is_enabled") &&
                 !ReadBool(item, false, "is_disabled") && !ReadBool(item, false, "deleted");
-            var user = new ChatUser(id, name, string.IsNullOrWhiteSpace(display) ? name : display, active);
+            var user = new ChatUser(id, name, string.IsNullOrWhiteSpace(display) ? name : display, active,
+                ReadProfileString(item, "email"));
             users[id] = user;
             var type = ReadString(item, "type");
             var humanType = ReadString(item, "human_type");
@@ -415,6 +417,16 @@ public sealed partial class SynologyChatClient : IDisposable
             if (source.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array)
                 return value.EnumerateArray().ToArray();
         return Array.Empty<JsonElement>();
+    }
+
+    private static string ReadProfileString(JsonElement source, params string[] names)
+    {
+        if (source.ValueKind != JsonValueKind.Object) return "";
+        foreach (var name in names)
+            if (source.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(value.GetString())) return value.GetString()!.Trim();
+        return source.TryGetProperty("user_props", out var properties)
+            ? ReadProfileString(properties, names) : "";
     }
 
     private static string ReadString(JsonElement source, params string[] names)

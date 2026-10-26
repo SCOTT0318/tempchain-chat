@@ -13,8 +13,8 @@ internal static class UpdateTests
     private static readonly Version Current = new(1, 1, 2);
     private static string Feed(string tag = "v1.1.3", string? url = null, string? digest = null, long? size = null, bool preview = false, bool draft = false) => JsonSerializer.Serialize(new {
         tag_name = tag, prerelease = preview, draft,
-        assets = new[] { new { name = "TempChainChat-Setup-" + tag.TrimStart('v') + ".exe", state = "uploaded",
-            browser_download_url = url ?? $"https://github.com/{ReleaseUpdateClient.Repository}/releases/download/{tag}/TempChainChat-Setup-{tag.TrimStart('v')}.exe",
+        assets = new[] { new { name = "TChat-Setup-" + tag.TrimStart('v') + ".exe", state = "uploaded",
+            browser_download_url = url ?? $"https://github.com/{ReleaseUpdateClient.Repository}/releases/download/{tag}/TChat-Setup-{tag.TrimStart('v')}.exe",
             digest = digest ?? "sha256:" + Hash, size = size ?? Payload.Length } }
     });
 

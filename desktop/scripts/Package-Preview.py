@@ -47,9 +47,9 @@ def main():
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version or ""):
         raise ValueError("Version must have three numeric components")
     dist = inside(ROOT / "dist")
-    payload = inside(dist / f"TempChainChat-{version}-win-x64")
-    archive = inside(dist / f"TempChainChat-{version}-win-x64.zip")
-    installer = inside(dist / f"TempChainChat-Setup-{version}.exe")
+    payload = inside(dist / f"TChat-{version}-win-x64")
+    archive = inside(dist / f"TChat-{version}-win-x64.zip")
+    installer = inside(dist / f"TChat-Setup-{version}.exe")
     if any(path.exists() for path in (payload, archive, installer)):
         raise ValueError("Version output exists; move it aside explicitly before rebuilding")
     sources = []

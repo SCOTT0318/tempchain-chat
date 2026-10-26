@@ -8,7 +8,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>TempChain.Chat</AssemblyName>
     <RootNamespace>TempChain.Chat</RootNamespace>
-    <Version>1.1.4</Version>
+    <Version>1.1.5</Version>
     <Product>TChat</Product>
     <Title>TChat</Title>
     <ApplicationManifest>app.manifest</ApplicationManifest>

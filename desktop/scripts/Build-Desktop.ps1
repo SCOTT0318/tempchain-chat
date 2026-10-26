@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.1.4',
+    [string]$Version = '1.1.5',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller
@@ -67,7 +67,6 @@ $payloadName = "TChat-$Version-win-x64"
 $finalPayload = Assert-ChildPath (Join-Path $distRoot $payloadName) $distRoot
 $finalZip = Assert-ChildPath (Join-Path $distRoot "$payloadName.zip") $distRoot
 $finalInstaller = Assert-ChildPath (Join-Path $distRoot "TChat-Setup-$Version.exe") $distRoot
-$compatibilityInstaller = Assert-ChildPath (Join-Path $distRoot "TempChainChat-Setup-$Version.exe") $distRoot
 $stagingParent = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp\TempChainChat-builds'
 $stagingName = 'TempChainChat-build-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $stagingRoot = Assert-ChildPath (Join-Path $stagingParent $stagingName) $stagingParent
@@ -122,7 +121,7 @@ foreach ($directory in $directories) {
 }
 [IO.File]::WriteAllText($uninstallInclude, ($deleteLines -join "`r`n") + "`r`n", [Text.UTF8Encoding]::new($true))
 
-$stagedInstaller = Join-Path $stagingRoot "TempChainChat-Setup-$Version.exe"
+$stagedInstaller = Join-Path $stagingRoot "TChat-Setup-$Version.exe"
 if (-not $SkipInstaller) {
     if (-not $NsisPath) {
         $bundledCompiler = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp\TempChainChat-tools\nsis-3.13\makensis.exe'
@@ -170,12 +169,11 @@ Compress-Archive -LiteralPath $finalPayload -DestinationPath $stagedZip -Compres
 Copy-VerifiedFile $stagedZip $finalZip
 if (-not $SkipInstaller) {
     Copy-VerifiedFile $stagedInstaller $finalInstaller
-    Copy-VerifiedFile $stagedInstaller $compatibilityInstaller
 }
 
 $checksumTargets = [Collections.Generic.List[string]]::new()
 $checksumTargets.Add($finalZip)
-if (-not $SkipInstaller) { $checksumTargets.Add($finalInstaller); $checksumTargets.Add($compatibilityInstaller) }
+if (-not $SkipInstaller) { $checksumTargets.Add($finalInstaller) }
 foreach ($relative in $relativeFiles) { $checksumTargets.Add((Join-Path $finalPayload $relative)) }
 $checksumLines = foreach ($filePath in $checksumTargets) {
     $relative = [IO.Path]::GetRelativePath($distRoot, $filePath).Replace('\', '/')
@@ -196,7 +194,6 @@ foreach ($line in [IO.File]::ReadAllLines($checksumsPath)) {
     Payload = $finalPayload
     Zip = $finalZip
     Installer = $(if ($SkipInstaller) { $null } else { $finalInstaller })
-    CompatibilityInstaller = $(if ($SkipInstaller) { $null } else { $compatibilityInstaller })
     Checksums = $checksumsPath
     Staging = $stagingRoot
     PayloadFileCount = $relativeFiles.Count

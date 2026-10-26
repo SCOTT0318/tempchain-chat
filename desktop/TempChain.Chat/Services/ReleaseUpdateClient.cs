@@ -28,7 +28,7 @@ public sealed class ReleaseUpdateClient : IDisposable
         http.DefaultRequestHeaders.UserAgent.ParseAdd("TempChainChat-Updater/1.0");
     }
 
-    public static string InstallerName(Version version) => $"TempChainChat-Setup-{version.ToString(3)}.exe";
+    public static string InstallerName(Version version) => $"TChat-Setup-{version.ToString(3)}.exe";
 
     public static UpdateRelease? ParseRelease(string json, Version current)
     {
