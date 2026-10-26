@@ -8,6 +8,12 @@ internal static class SecurityTests
 {
     internal static void RunAll()
     {
+        Run("Legacy login records without a lock mode retain a migration path", () => {
+            var legacy=System.Text.Json.JsonSerializer.Deserialize<SavedLogin>("{\"UserName\":\"fixture\",\"Password\":\"fixture\",\"LockSalt\":\"salt\",\"LockHash\":\"hash\"}")!;
+            Equal("",legacy.LockMode);
+            Equal("pin4",AppLockPassword.ModeFor("0123")); Equal("pin6",AppLockPassword.ModeFor("012345"));
+            Equal("text",AppLockPassword.ModeFor("legacy123"));
+        });
         Run("App lock hashes use fresh salts, reject wrong passwords and preserve NAS credentials", () => {
             var first = AppLockPassword.Create("fixture-user", "fixture-nas-password", "fixture-lock-password");
             var second = AppLockPassword.Create("fixture-user", "fixture-nas-password", "fixture-lock-password");
@@ -23,6 +29,7 @@ internal static class SecurityTests
             {
                 var login = AppLockPassword.Create("u", "p", password);
                 Check(AppLockPassword.Verify(login, password));
+                Equal(password=="0123" ? "pin4" : password=="012345" ? "pin6" : "text",login.LockMode);
             }
             foreach (var password in new[] { "", "123", "12345", "1234567", "12345678", "abcd", "abc12", "      " })
                 Throws<ArgumentException>(() => AppLockPassword.Create("u", "p", password));

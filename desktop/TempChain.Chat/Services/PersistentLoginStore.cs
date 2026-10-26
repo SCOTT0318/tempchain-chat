@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace TempChain.Chat.Services;
 
-public sealed record SavedLogin(string UserName, string Password, string LockSalt, string LockHash);
+public sealed record SavedLogin(string UserName, string Password, string LockSalt, string LockHash, string LockMode = "");
 
 /// <summary>Secrets are protected by Windows DPAPI for the current Windows user, never settings.json.</summary>
 public sealed class PersistentLoginStore
@@ -23,7 +23,8 @@ public sealed class PersistentLoginStore
         try
         {
             var login = JsonSerializer.Deserialize<SavedLogin>(clear) ?? throw new InvalidDataException();
-            if (string.IsNullOrWhiteSpace(login.UserName) || string.IsNullOrEmpty(login.Password) ||
+            if (login.LockMode is not ("" or "pin4" or "pin6" or "text") ||
+                string.IsNullOrWhiteSpace(login.UserName) || string.IsNullOrEmpty(login.Password) ||
                 Convert.FromBase64String(login.LockSalt).Length != 16 || Convert.FromBase64String(login.LockHash).Length != 32)
                 throw new InvalidDataException();
             return login;
@@ -73,6 +74,8 @@ public sealed class PersistentLoginStore
 
 public static class AppLockPassword
 {
+    public static string ModeFor(string password) => System.Linq.Enumerable.All(password, ch => ch is >= '0' and <= '9')
+        ? password.Length switch { 4 => "pin4", 6 => "pin6", _ => "text" } : "text";
     public static SavedLogin Create(string userName, string password, string lockPassword)
     {
         var digitsOnly = lockPassword.Length > 0 && System.Linq.Enumerable.All(lockPassword, ch => ch is >= '0' and <= '9');
@@ -81,7 +84,7 @@ public static class AppLockPassword
             throw new ArgumentException("숫자는 4자리 또는 6자리, 문자를 포함한 암호는 6자 이상으로 입력해 주세요.");
         var salt = RandomNumberGenerator.GetBytes(16);
         return new SavedLogin(userName, password, Convert.ToBase64String(salt),
-            Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(lockPassword, salt, 210000, HashAlgorithmName.SHA256, 32)));
+            Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(lockPassword, salt, 210000, HashAlgorithmName.SHA256, 32)), ModeFor(lockPassword));
     }
     public static bool Verify(SavedLogin login, string password)
     {

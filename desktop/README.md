@@ -1,13 +1,13 @@
 # TChat · Windows 앱
 
-현재 버전은 **1.2.1**입니다. 사용자 설명의 `이름 | 직급`을 이름·직급으로 표시하고 이메일과 함께 검색합니다. 알림 시간은 선택 즉시 저장합니다. 첫 ERP 계정 로그인 뒤 별도 앱 잠금 암호를 설정하면 재시작·업데이트 후에도 로그인을 유지합니다. 자동 잠금은 기본 5분이며 1~60분으로 설정합니다. Windows 잠금과 Ctrl+L도 지원합니다. [1.2.1 설치 파일](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.1/TChat-Setup-1.2.1.exe)과 [릴리스 안내](../docs/RELEASE-v1.2.1.md)를 참고하세요. 이번 버전부터 TChat 설치 파일만 배포하며 1.1.4 이하에서는 직접 내려받아 업데이트해야 합니다.
+현재 버전은 **1.2.2**입니다. 사용자 설명의 `이름 | 직급`을 이름·직급으로 표시하고 이메일과 함께 검색합니다. 알림 시간은 선택 즉시 저장합니다. 첫 ERP 계정 로그인 뒤 별도 앱 잠금 암호를 설정하면 재시작·업데이트 후에도 로그인을 유지합니다. 자동 잠금은 기본 5분이며 1~60분으로 설정합니다. Windows 잠금과 Ctrl+L도 지원합니다. [1.2.2 설치 파일](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.2/TChat-Setup-1.2.2.exe)과 [릴리스 안내](../docs/RELEASE-v1.2.2.md)를 참고하세요. 이번 버전부터 TChat 설치 파일만 배포하며 1.1.4 이하에서는 직접 내려받아 업데이트해야 합니다.
 
 1.1.4부터 앱 표시 이름은 **TChat**입니다. 알림은 페이드 없이 아래에서 올라오며, 화면의 반복 안내를 줄였습니다. 기존 설치 경로·내부 실행 파일명은 업데이트 호환을 위해 유지합니다. 이전 버전용 호환 설치 파일은 `TempChainChat-Setup-1.1.4.exe`이며 TChat 설치 파일과 바이트가 같습니다.
 
 
 Windows 11용 **순수 WPF 사내 메신저**입니다. 로그인·직원 목록·대화 목록·메시지 화면을 네이티브 컨트롤로 구성하고 Synology Chat API와 직접 통신합니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 사용하며 선택 기능인 FastAPI 서버 없이 실행할 수 있습니다.
 
-[설치 EXE 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.1/TChat-Setup-1.2.1.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+[설치 EXE 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.2.2/TChat-Setup-1.2.2.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
 ## v1.1.4 기능 및 확인 방법
 
@@ -39,10 +39,10 @@ dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c
 if ($LASTEXITCODE -ne 0) { throw '테스트 실패' }
 dotnet run --project desktop/TempChain.Chat.UiTests/TempChain.Chat.UiTests.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw 'WPF 화면 검증 실패' }
-./desktop/scripts/Build-Desktop.ps1 -Version 1.2.1 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
+./desktop/scripts/Build-Desktop.ps1 -Version 1.2.2 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-결과는 `dist/TChat-Setup-1.2.1.exe`, `dist/TChat-1.2.1-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 설정에서 현재·최신 버전을 확인하고 자동 확인·다운로드를 선택할 수 있습니다. 준비된 업데이트는 ‘업데이트 및 재시작’으로 적용합니다. 비공개 저장소에서는 공개 전까지 자동 확인이 제한됩니다.
+결과는 `dist/TChat-Setup-1.2.2.exe`, `dist/TChat-1.2.2-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 설정에서 현재·최신 버전을 확인하고 자동 확인·다운로드를 선택할 수 있습니다. 준비된 업데이트는 ‘업데이트 및 재시작’으로 적용합니다. 비공개 저장소에서는 공개 전까지 자동 확인이 제한됩니다.
 
 Windows WPF 빌드와 코어 회귀 테스트 95개가 통과했습니다. 이번 버전은 격리 화면에서 알림 이동·불투명도 유지와 바로가기 이전을 검증하며 기존 설치본은 변경하지 않습니다. 실제 서버의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 서버의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
 
