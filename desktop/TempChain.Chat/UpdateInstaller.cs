@@ -61,7 +61,7 @@ internal static class UpdateInstaller
                 }
                 @{success=$false; restored=$restored; error=$failure; backup=$backup; checkedAt=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $resultPath -Encoding UTF8
                 Add-Type -AssemblyName System.Windows.Forms
-                [System.Windows.Forms.MessageBox]::Show('업데이트를 완료하지 못했습니다. 기존 앱을 다시 실행하고 설정에서 업데이트를 확인해 주세요.','TempChain Chat 업데이트') | Out-Null
+                [System.Windows.Forms.MessageBox]::Show('업데이트를 완료하지 못했습니다. 기존 앱을 다시 실행하고 설정에서 업데이트를 확인해 주세요.','TChat 업데이트') | Out-Null
                 exit 1
             }
             """;
@@ -69,7 +69,7 @@ internal static class UpdateInstaller
 
     public static void Start(string installer, string digest, string version)
     {
-        if (!IsInstalledApp) throw new InvalidOperationException("자동 설치는 설치된 TempChain Chat에서 사용할 수 있습니다.");
+        if (!IsInstalledApp) throw new InvalidOperationException("자동 설치는 설치된 TChat에서 사용할 수 있습니다.");
         using (var stream = File.OpenRead(installer))
             if (!Convert.ToHexString(SHA256.HashData(stream)).Equals(digest, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("설치 파일이 변경되어 업데이트를 중단했습니다.");

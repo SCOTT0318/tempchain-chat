@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.1.3',
+    [string]$Version = '1.1.4',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller
@@ -63,10 +63,11 @@ $projectPath = Join-Path $repoRoot 'desktop\TempChain.Chat\TempChain.Chat.csproj
 $installerSource = Join-Path $repoRoot 'desktop\packaging\TempChainChat.nsi'
 $iconPath = Join-Path $repoRoot 'desktop\TempChain.Chat\Assets\app.ico'
 $distRoot = Join-Path $repoRoot 'dist'
-$payloadName = "TempChainChat-$Version-win-x64"
+$payloadName = "TChat-$Version-win-x64"
 $finalPayload = Assert-ChildPath (Join-Path $distRoot $payloadName) $distRoot
 $finalZip = Assert-ChildPath (Join-Path $distRoot "$payloadName.zip") $distRoot
-$finalInstaller = Assert-ChildPath (Join-Path $distRoot "TempChainChat-Setup-$Version.exe") $distRoot
+$finalInstaller = Assert-ChildPath (Join-Path $distRoot "TChat-Setup-$Version.exe") $distRoot
+$compatibilityInstaller = Assert-ChildPath (Join-Path $distRoot "TempChainChat-Setup-$Version.exe") $distRoot
 $stagingParent = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp\TempChainChat-builds'
 $stagingName = 'TempChainChat-build-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $stagingRoot = Assert-ChildPath (Join-Path $stagingParent $stagingName) $stagingParent
@@ -167,11 +168,14 @@ foreach ($file in $payloadFiles) {
 $stagedZip = Join-Path $stagingRoot "$payloadName.zip"
 Compress-Archive -LiteralPath $finalPayload -DestinationPath $stagedZip -CompressionLevel Optimal
 Copy-VerifiedFile $stagedZip $finalZip
-if (-not $SkipInstaller) { Copy-VerifiedFile $stagedInstaller $finalInstaller }
+if (-not $SkipInstaller) {
+    Copy-VerifiedFile $stagedInstaller $finalInstaller
+    Copy-VerifiedFile $stagedInstaller $compatibilityInstaller
+}
 
 $checksumTargets = [Collections.Generic.List[string]]::new()
 $checksumTargets.Add($finalZip)
-if (-not $SkipInstaller) { $checksumTargets.Add($finalInstaller) }
+if (-not $SkipInstaller) { $checksumTargets.Add($finalInstaller); $checksumTargets.Add($compatibilityInstaller) }
 foreach ($relative in $relativeFiles) { $checksumTargets.Add((Join-Path $finalPayload $relative)) }
 $checksumLines = foreach ($filePath in $checksumTargets) {
     $relative = [IO.Path]::GetRelativePath($distRoot, $filePath).Replace('\', '/')
@@ -192,6 +196,7 @@ foreach ($line in [IO.File]::ReadAllLines($checksumsPath)) {
     Payload = $finalPayload
     Zip = $finalZip
     Installer = $(if ($SkipInstaller) { $null } else { $finalInstaller })
+    CompatibilityInstaller = $(if ($SkipInstaller) { $null } else { $compatibilityInstaller })
     Checksums = $checksumsPath
     Staging = $stagingRoot
     PayloadFileCount = $relativeFiles.Count

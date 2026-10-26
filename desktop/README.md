@@ -1,18 +1,21 @@
-# TempChain Chat · Windows 앱
+# TChat · Windows 앱
+
+1.1.4부터 앱 표시 이름은 **TChat**입니다. 알림은 페이드 없이 아래에서 올라오며, 화면의 반복 안내를 줄였습니다. 기존 설치 경로·내부 실행 파일명은 업데이트 호환을 위해 유지합니다. 이전 버전용 호환 설치 파일은 `TempChainChat-Setup-1.1.4.exe`이며 TChat 설치 파일과 바이트가 같습니다.
+
 
 Windows 11용 **순수 WPF 사내 메신저**입니다. 로그인·직원 목록·대화 목록·메시지 화면을 네이티브 컨트롤로 구성하고 Synology Chat API와 직접 통신합니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 사용하며 선택 기능인 FastAPI 서버 없이 실행할 수 있습니다.
 
-저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.3/TempChainChat-Setup-1.1.3.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+[설치 EXE 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.4/TChat-Setup-1.1.4.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-## v1.1.3 기능 및 확인 방법
+## v1.1.4 기능 및 확인 방법
 
-v1.1.3 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.3.md)을 참고하세요.
+v1.1.4는 Windows 빌드·격리 화면 검증 대상입니다. 현재 PC의 설치본은 요청에 따라 업데이트하지 않습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.4.md)을 참고하세요.
 
 - **설정 → 바로가기 아이콘:** 바탕화면·시작 메뉴에 현재 실행 파일을 연결하는 아이콘을 만듭니다. 설정의 추가 버튼은 해당 아이콘이 없을 때만 활성화됩니다. ZIP은 폴더를 최종 위치에 옮긴 후 사용하세요. 설치 EXE에서는 두 위치의 바로가기 생성을 각각 선택할 수 있습니다.
 - **설정 → 새 메시지 알림:** **3·4·5초 표시 시간**, **보낸 사람 보이기/가리기**, 미리 보기를 제공합니다. Windows의 애니메이션 비활성화 설정을 존중합니다. 메시지 본문은 알림에 노출하지 않습니다. 가리기를 선택하면 직원 이름과 방 이름도 숨깁니다.
 - **다른 방 알림:** 최초 로그인 때 기존 미읽음 기록은 알리지 않습니다. 이후 다른 방·숨긴 방의 새 일반 메시지를 확인하고, 현재 보고 있는 방·내가 보낸 최신 메시지는 제외합니다. 앱이 완전히 종료됐거나 네트워크가 끊기면 알림이 오지 않습니다. 약 3초 조회 방식이며 스레드·암호화 대화 알림은 지원하지 않습니다.
-- **대화 상단 → 채팅방 관리:** 비공개/공개 방 만들기, 이름·설명 입력, 직원 다중 선택·검색, 초대, 나가기, 전체 방 삭제(폐쇄)를 제공합니다. 기본방·나에게 보내기·일대일·암호화 대화의 관리는 차단합니다. 공개방 생성에는 별도 NAS 권한이 필요합니다.
-- **삭제 안전장치:** ‘숨기기’는 내 목록만 정리하고 ‘나가기’는 내 참여를 끝냅니다. ‘전체 채팅방 삭제(폐쇄)’는 다른 참여자에게도 영향을 주며 방 이름 재입력·동의 후 실행합니다. NAS의 `Channel.close`를 사용하므로 **기록의 물리적 영구 삭제를 보장하지 않습니다.** 서버 보존 정책을 따릅니다.
+- **대화 상단 → 채팅방 관리:** 비공개/공개 방 만들기, 이름·설명 입력, 직원 다중 선택·검색, 초대, 나가기, 전체 방 닫기를 제공합니다. 기본방·나에게 보내기·일대일·암호화 대화의 관리는 차단합니다. 공개방 생성에는 별도 NAS 권한이 필요합니다.
+- **삭제 안전장치:** ‘숨기기’는 내 목록만 정리하고 ‘나가기’는 내 참여를 끝냅니다. ‘전체 채팅방 닫기’는 다른 참여자에게도 영향을 주며 방 이름 재입력·동의 후 실행합니다. NAS의 `Channel.close`를 사용하므로 **기록의 물리적 영구 삭제를 보장하지 않습니다.** 서버 보존 정책을 따릅니다.
 - NAS `Misc.acl` 권한을 확인하지 못하면 관리 기능을 비활성화합니다. 생성·초대·나가기·폐쇄 직전에도 권한을 다시 확인합니다. 생성 후 참여/초대만 실패했다면 방 ID를 안내하며 중복 생성이나 자동 재시도를 하지 않습니다.
 
 ### 사용자가 해 줄 확인
@@ -25,19 +28,19 @@ v1.1.3 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자
 
 ### 직접 빌드
 
-이번 정식 릴리스는 Windows 11 로컬 환경에서 빌드·게시·설치 검증했습니다. GitHub Actions 실행 결과로 대체해 보고하지 않습니다.
+Windows 11에서 빌드하고, 설치기는 별도 폴더 추출·해시 비교로 검증합니다.
 
 직접 빌드는 main 브랜치를 내려받은 뒤 .NET 10 SDK, PowerShell 7, 공식 NSIS 3.x가 설치된 Windows에서 실행합니다.
 
 ```powershell
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw '테스트 실패' }
-./desktop/scripts/Build-Desktop.ps1 -Version 1.1.3 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
+./desktop/scripts/Build-Desktop.ps1 -Version 1.1.4 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-결과는 `dist/TempChainChat-Setup-1.1.3.exe`, `dist/TempChainChat-1.1.3-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 설정에서 현재·최신 버전을 확인하고 자동 확인·다운로드를 선택할 수 있습니다. 준비된 업데이트는 ‘업데이트 및 재시작’으로 적용합니다. 비공개 저장소에서는 공개 전까지 자동 확인이 제한됩니다.
+결과는 `dist/TChat-Setup-1.1.4.exe`, `dist/TChat-1.1.4-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 설정에서 현재·최신 버전을 확인하고 자동 확인·다운로드를 선택할 수 있습니다. 준비된 업데이트는 ‘업데이트 및 재시작’으로 적용합니다. 비공개 저장소에서는 공개 전까지 자동 확인이 제한됩니다.
 
-Windows WPF 빌드와 코어 회귀 테스트 95개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
+Windows WPF 빌드와 코어 회귀 테스트 95개가 통과했습니다. 이번 버전은 격리 화면에서 알림 이동·불투명도 유지와 바로가기 이전을 검증하며 기존 설치본은 변경하지 않습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
 
 Linux 교차 빌드 환경에서는 먼저 자체 포함 게시물을 만들고 아래 스크립트로 같은 NSIS 소스·체크섬을 사용할 수 있습니다. 이 방식도 Windows 실행 검증을 대신하지 않습니다.
 
@@ -52,7 +55,7 @@ python3 desktop/scripts/Package-Preview.py --publish-dir artifacts/windows-publi
 
 GitHub의 고정 저장소 정식 릴리스만 사용하며 사전 릴리스·동일 버전·낮은 버전은 설치하지 않습니다. 설치 파일의 정확한 이름·HTTPS 주소·크기·SHA-256을 확인하고 다운로드 직후와 설치 직전에 해시를 검사합니다. 앱이 종료된 뒤 설치하며 실패 시 결과 파일을 남깁니다. 자동 설치 모드는 기존 바로가기 유무와 설정을 보존합니다. ZIP에서 실행 중인 앱은 자동 설치 대상이 아닙니다.
 
-저장소는 사용자가 공개 전환할 예정입니다. 공개 전에는 직원 앱이 인증 없이 조회·다운로드할 수 없으므로 확인 실패를 안내합니다. 앱에 GitHub 토큰이나 NAS 인증값을 업데이트 요청으로 보내지 않습니다.
+공개 GitHub 정식 릴리스에서 인증 없이 업데이트를 확인합니다. 앱에 GitHub 토큰이나 NAS 인증값을 업데이트 요청으로 보내지 않습니다.
 
 ## 지원 범위
 
@@ -158,9 +161,9 @@ dotnet publish desktop/TempChain.Chat/TempChain.Chat.csproj -c Release -r win-x6
 
 ```text
 dist/
-  TempChainChat-1.1.3-win-x64/
-  TempChainChat-1.1.3-win-x64.zip
-  TempChainChat-Setup-1.1.3.exe
+  TChat-1.1.4-win-x64/
+  TChat-1.1.4-win-x64.zip
+  TChat-Setup-1.1.4.exe
   SHA256SUMS.txt
 ```
 

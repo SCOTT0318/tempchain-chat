@@ -7,8 +7,8 @@ namespace TempChain.Chat;
 public sealed record NotificationContent(string Title, string Detail)
 {
     public static NotificationContent Create(string sender, string room, bool showSender) => showSender
-        ? new(string.IsNullOrWhiteSpace(sender) ? "새 메시지" : sender, string.IsNullOrWhiteSpace(room) ? "새 메시지가 도착했습니다." : room + " · 새 메시지")
-        : new("새 메시지가 도착했습니다", "클릭하면 대화를 엽니다.");
+        ? new(string.IsNullOrWhiteSpace(sender) ? "새 메시지" : sender, string.IsNullOrWhiteSpace(room) || room == sender ? "" : room)
+        : new("새 메시지", "");
 }
 
 /// <summary>Baseline per channel, not the currently displayed message list. Never marks a post read.</summary>

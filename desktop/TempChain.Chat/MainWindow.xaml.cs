@@ -83,14 +83,14 @@ public partial class MainWindow : Window
     private void CreateTray()
     {
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("TempChain Chat 열기", null, (_, _) => Dispatcher.Invoke(RestoreWindow));
+        menu.Items.Add("TChat 열기", null, (_, _) => Dispatcher.Invoke(RestoreWindow));
         menu.Items.Add("새로 고침", null, (_, _) => Dispatcher.Invoke(() => { _ = RefreshChatAsync(true); }));
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("종료", null, (_, _) => Dispatcher.Invoke(Exit));
         System.Drawing.Icon icon;
         try { icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!) ?? SystemIcons.Application; }
         catch { icon = SystemIcons.Application; }
-        tray = new Forms.NotifyIcon { Text = "TempChain Chat", Icon = icon, Visible = true, ContextMenuStrip = menu };
+        tray = new Forms.NotifyIcon { Text = "TChat", Icon = icon, Visible = true, ContextMenuStrip = menu };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(RestoreWindow);
     }
 
@@ -108,7 +108,7 @@ public partial class MainWindow : Window
     {
         var updates = AppUpdateManager.Instance;
         UpdateBanner.Visibility = updates.IsReady ? Visibility.Visible : Visibility.Collapsed;
-        UpdateBannerText.Text = $"v{updates.LatestVersionText} 업데이트가 준비되었습니다. 재시작하면 다시 로그인해야 합니다.";
+        UpdateBannerText.Text = $"v{updates.LatestVersionText} 업데이트 준비됨";
         InstallUpdateButton.IsEnabled = updates.CanInstall;
     }
 
@@ -247,7 +247,7 @@ public partial class MainWindow : Window
                     }
                 }
             }
-            StatusText.Text = $"{DateTime.Now:HH:mm:ss} 업데이트 · 연락처 {Contacts.Count}명 · 3초 간격 동기화";
+            StatusText.Text = $"연락처 {Contacts.Count}명";
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -312,8 +312,8 @@ public partial class MainWindow : Window
         }
         messagesChannelId = channelId;
         MessageEmptyPanel.Visibility = Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyHeadingText.Text = "첫 메시지를 보내 보세요";
-        EmptyDetailText.Text = "아직 이 대화에 표시할 메시지가 없습니다.";
+        EmptyHeadingText.Text = "아직 메시지가 없습니다";
+        EmptyDetailText.Text = "";
     }
 
     private async void ConversationsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -327,7 +327,7 @@ public partial class MainWindow : Window
         SetConversationHeader(item);
         MessageEmptyPanel.Visibility = Visibility.Visible;
         EmptyHeadingText.Text = "대화를 불러오는 중";
-        EmptyDetailText.Text = "서버에서 메시지를 가져오고 있습니다.";
+        EmptyDetailText.Text = "";
         await RefreshChatAsync(false, waitForGate: true);
     }
 
@@ -352,10 +352,10 @@ public partial class MainWindow : Window
         UpdateRoomActions();
         EncryptedNotice.Visibility = Visibility.Collapsed;
         ChatTitleText.Text = "우리 팀과 대화를 시작해 보세요";
-        ChatDetailText.Text = "왼쪽에서 대화를 선택하거나 연락처를 열어 주세요.";
+        ChatDetailText.Text = "";
         MessageEmptyPanel.Visibility = Visibility.Visible;
-        EmptyHeadingText.Text = "대화가 연결되는 곳";
-        EmptyDetailText.Text = "연락처를 두 번 클릭하면 새 대화를 시작할 수 있습니다.";
+        EmptyHeadingText.Text = "대화를 선택하세요";
+        EmptyDetailText.Text = "연락처에서 대화를 시작하세요.";
     }
 
     private async void HideConversation_Click(object sender, RoutedEventArgs e)
@@ -525,9 +525,9 @@ public partial class MainWindow : Window
     {
         var menu = new ContextMenu();
         createRoomMenu = CreateMenuItem("새 채팅방 만들기", "\uE710"); createRoomMenu.Click += CreateRoom_Click;
-        inviteRoomMenu = CreateMenuItem("선택한 방에 직원 초대", "\uE8FA"); inviteRoomMenu.Click += InviteRoom_Click;
-        leaveRoomMenu = CreateMenuItem("선택한 방 나가기", "\uE8BB"); leaveRoomMenu.Click += LeaveRoom_Click;
-        closeRoomMenu = CreateMenuItem("전체 채팅방 삭제(폐쇄)…", "\uE74D");
+        inviteRoomMenu = CreateMenuItem("직원 초대", "\uE8FA"); inviteRoomMenu.Click += InviteRoom_Click;
+        leaveRoomMenu = CreateMenuItem("채팅방 나가기", "\uE8BB"); leaveRoomMenu.Click += LeaveRoom_Click;
+        closeRoomMenu = CreateMenuItem("전체 채팅방 닫기…", "\uE74D");
         closeRoomMenu.Style = (Style)FindResource("DangerMenuItem"); closeRoomMenu.Click += CloseRoom_Click;
         menu.Items.Add(createRoomMenu); menu.Items.Add(inviteRoomMenu); menu.Items.Add(leaveRoomMenu);
         menu.Items.Add(new Separator()); menu.Items.Add(closeRoomMenu);
@@ -718,7 +718,7 @@ public partial class MainWindow : Window
         Hide();
         if (showBalloon && firstHide && tray is not null)
         {
-            tray.ShowBalloonTip(4000, "TempChain Chat", "알림 영역에서 계속 실행됩니다. 아이콘을 두 번 누르면 다시 열립니다.", Forms.ToolTipIcon.Info);
+            tray.ShowBalloonTip(4000, "TChat", "알림 영역에서 계속 실행 중입니다.", Forms.ToolTipIcon.Info);
             firstHide = false;
         }
     }

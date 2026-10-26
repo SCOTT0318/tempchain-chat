@@ -20,8 +20,8 @@ public sealed class AppUpdateManager : IDisposable
     public bool IsBusy => busy;
     public bool IsReady => installer is not null;
     public bool CanInstall => IsReady && !busy && UpdateInstaller.IsInstalledApp;
-    public string LatestVersionText { get; private set; } = "아직 확인하지 않았어요";
-    public string Status { get; private set; } = "최신 버전을 확인해 주세요.";
+    public string LatestVersionText { get; private set; } = "미확인";
+    public string Status { get; private set; } = "";
     public event Action? Changed;
 
     private static Version GetVersion()
@@ -53,7 +53,7 @@ public sealed class AppUpdateManager : IDisposable
     {
         if (busy || lifetime.IsCancellationRequested) return;
         busy = true;
-        Status = "최신 버전을 확인하는 중…"; Changed?.Invoke();
+        Status = "확인 중…"; Changed?.Invoke();
         try
         {
             var latest = await client.CheckAsync(CurrentVersion, lifetime.Token);
@@ -61,7 +61,7 @@ public sealed class AppUpdateManager : IDisposable
             {
                 // A prepared newer version remains usable if a release is temporarily rolled back.
                 LatestVersionText = IsReady ? release!.Version.ToString(3) : client.LatestVersion?.ToString(3) ?? "정식 릴리스 없음";
-                Status = IsReady ? "업데이트를 설치할 준비가 됐어요." : "현재 버전보다 새로운 정식 업데이트가 없습니다.";
+                Status = IsReady ? "업데이트 준비됨" : "최신 버전입니다.";
                 return;
             }
             LatestVersionText = latest.Version.ToString(3);
@@ -73,7 +73,7 @@ public sealed class AppUpdateManager : IDisposable
                 installer = downloaded;
                 release = latest;
             }
-            Status = UpdateInstaller.IsInstalledApp ? "업데이트를 설치할 준비가 됐어요. 재시작하면 적용됩니다." : "설치 파일로 설치한 앱에서 자동 업데이트를 적용할 수 있어요.";
+            Status = UpdateInstaller.IsInstalledApp ? "업데이트 준비됨" : "설치 버전에서 업데이트할 수 있습니다.";
         }
         catch (OperationCanceledException) { Status = "업데이트 확인이 취소되었거나 응답 시간이 초과됐습니다."; }
         catch (InvalidOperationException ex) { Status = ex.Message; }

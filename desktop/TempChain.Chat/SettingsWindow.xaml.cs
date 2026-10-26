@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         CurrentVersionText.Text = "v" + AppUpdateManager.CurrentVersionText;
         LatestVersionText.Text = updates.LatestVersionText;
         UpdateStatusText.Text = updates.Status;
+        UpdateStatusText.Visibility = string.IsNullOrWhiteSpace(updates.Status) ? Visibility.Collapsed : Visibility.Visible;
         CheckUpdateButton.IsEnabled = !updates.IsBusy;
         ApplyUpdateButton.IsEnabled = updates.CanInstall;
     }
@@ -75,8 +76,8 @@ public partial class SettingsWindow : Window
         var startExists = File.Exists(ShortcutRegistration.GetPath(false));
         DesktopShortcutButton.IsEnabled = !desktopExists;
         StartShortcutButton.IsEnabled = !startExists;
-        DesktopShortcutStatus.Text = desktopExists ? "추가되어 있어요" : "바로가기 없음";
-        StartShortcutStatus.Text = startExists ? "추가되어 있어요" : "바로가기 없음";
+        DesktopShortcutStatus.Text = desktopExists ? "추가됨" : "없음";
+        StartShortcutStatus.Text = startExists ? "추가됨" : "없음";
     }
     private void CreateShortcut(bool desktop)
     {
@@ -84,7 +85,7 @@ public partial class SettingsWindow : Window
         {
             if (File.Exists(ShortcutRegistration.GetPath(desktop))) { RefreshShortcuts(); return; }
             ShortcutRegistration.Create(desktop, overwrite: false);
-            ShortcutStatusText.Text = desktop ? "바탕화면 아이콘을 만들었습니다." : "시작 메뉴 아이콘을 만들었습니다.";
+            ShortcutStatusText.Text = desktop ? "바탕화면에 추가했습니다." : "시작 메뉴에 추가했습니다.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException or SecurityException)
         { ErrorText.Text = "바로가기를 만들지 못했습니다. 설치된 앱인지, Windows 폴더 쓰기 권한이 있는지 확인해 주세요."; }

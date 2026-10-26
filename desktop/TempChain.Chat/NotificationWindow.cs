@@ -23,12 +23,12 @@ public sealed class NotificationWindow : Window
         AllowsTransparency = true;
         Background = Brushes.Transparent;
         ShowInTaskbar = false; ShowActivated = false; Topmost = true;
-        Title = "TempChain Chat 알림";
+        Title = "TChat 알림";
         animate = animation && SystemParameters.ClientAreaAnimation;
         var panel = new Grid { Margin = new Thickness(16) };
         panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var brand = new TextBlock { Text = "TEMPCHAIN  ·  새 알림", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(89, 123, 154)) };
+        var brand = new TextBlock { Text = "TChat", FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(89, 123, 154)) };
         panel.Children.Add(brand);
         var dismiss = new Button { Content = "닫기", FontSize = 10, Padding = new Thickness(7, 3, 7, 3), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
         dismiss.Click += (_, e) => { e.Handled = true; Dismiss(); };
@@ -36,7 +36,7 @@ public sealed class NotificationWindow : Window
         var open = new Button { Background = Brushes.Transparent, BorderBrush = Brushes.Transparent, Padding = new Thickness(0, 8, 0, 0), Margin = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Stretch, Cursor = Cursors.Hand };
         var content = new StackPanel { Width = 300 };
         content.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, FontSize = 15, TextTrimming = TextTrimming.CharacterEllipsis });
-        content.Children.Add(new TextBlock { Text = detail, FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(99, 122, 145)), Margin = new Thickness(0, 8, 0, 0) });
+        content.Children.Add(new TextBlock { Text = detail, Visibility = string.IsNullOrWhiteSpace(detail) ? Visibility.Collapsed : Visibility.Visible, FontSize = 12, TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(99, 122, 145)), Margin = new Thickness(0, 8, 0, 0) });
         open.Content = content;
         open.Click += (_, _) => { Dismiss(); activate?.Invoke(); };
         Grid.SetRow(open, 1); panel.Children.Add(open);
@@ -47,8 +47,14 @@ public sealed class NotificationWindow : Window
             var work = SystemParameters.WorkArea;
             Left = Math.Max(work.Left, work.Right - ActualWidth - 16);
             Top = Math.Max(work.Top, work.Bottom - ActualHeight - 16);
-            if (animate) BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
-            timer.Start();
+            if (animate)
+            {
+                var rise = new DoubleAnimation(work.Bottom + 8, Top, TimeSpan.FromMilliseconds(280))
+                { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.Stop };
+                rise.Completed += (_, _) => { if (!dismissing) timer.Start(); };
+                BeginAnimation(TopProperty, rise);
+            }
+            else timer.Start();
         };
         Closed += (_, _) => timer.Stop();
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; Dismiss(); } };
@@ -59,8 +65,9 @@ public sealed class NotificationWindow : Window
         if (dismissing) return;
         dismissing = true; timer.Stop();
         if (!animate) { Close(); return; }
-        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150));
-        fade.Completed += (_, _) => Close();
-        BeginAnimation(OpacityProperty, fade);
+        var lower = new DoubleAnimation(Top, SystemParameters.WorkArea.Bottom + 8, TimeSpan.FromMilliseconds(160))
+        { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+        lower.Completed += (_, _) => Close();
+        BeginAnimation(TopProperty, lower);
     }
 }

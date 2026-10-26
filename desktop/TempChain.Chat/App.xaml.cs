@@ -19,6 +19,7 @@ public partial class App : Application
             return;
         }
         var store = new SettingsStore();
+        ShortcutRegistration.MigrateLegacyShortcuts();
         var window = new MainWindow(store);
         MainWindow = window;
         instance.ActivationRequested += () => Dispatcher.BeginInvoke(window.RestoreWindow);
