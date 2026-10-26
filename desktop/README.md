@@ -2,11 +2,11 @@
 
 Windows 11용 **순수 WPF 사내 메신저**입니다. 로그인·직원 목록·대화 목록·메시지 화면을 네이티브 컨트롤로 구성하고 Synology Chat API와 직접 통신합니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 사용하며 선택 기능인 FastAPI 서버 없이 실행할 수 있습니다.
 
-GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.0.0/TempChainChat-Setup-1.0.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.0/TempChainChat-Setup-1.1.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 설치 EXE·ZIP 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-## v1.1.0 사전 배포 기능 및 확인 방법
+## v1.1.0 기능 및 확인 방법
 
-이 버전은 **Windows 현장 확인이 필요한 사전 배포본**입니다. 기존 v1.0.0 검증 기록과 아래 새 버전 검증을 구분합니다.
+v1.1.0 정식 릴리스입니다. Windows 빌드·설치 업데이트·사용자 파일 보존을 확인했습니다. [검증 범위 및 남은 현장 확인](../docs/RELEASE-v1.1.0.md)을 참고하세요.
 
 - **설정 → 바로가기 아이콘:** 바탕화면·시작 메뉴에 현재 실행 파일을 연결하는 아이콘을 만듭니다. 기존 아이콘은 덮어쓰기 전에 확인합니다. ZIP은 폴더를 최종 위치에 옮긴 후 사용하세요. 설치 EXE도 두 위치의 바로가기를 만듭니다.
 - **설정 → 새 메시지 알림:** 알림 켜기/끄기, 나타남·사라짐 애니메이션, 소리, **1~60초 표시 시간**, 미리 보기를 제공합니다. Windows의 애니메이션 비활성화 설정을 존중합니다. 메시지 본문은 알림에 노출하지 않습니다.
@@ -23,11 +23,11 @@ GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOT
 4. 테스트 방에서만 숨기기·나가기·삭제(폐쇄)를 확인합니다. **실제 업무방으로 폐쇄를 시험하지 마세요.**
 5. 관리 메뉴가 회색이면 Ctrl+R로 새로 고침합니다. 공식 웹 Chat에서도 해당 직원 계정의 생성·초대 권한이 있는지 관리자가 확인해야 합니다. 기능을 위해 직원에게 DSM 관리자 권한을 부여할 필요는 없습니다. 암호·OTP·세션을 채팅으로 보내지 마세요.
 
-### 자동 빌드 권한 또는 직접 빌드
+### 직접 빌드
 
-현재 GitHub 연결은 Actions 조회/실행과 Workflows 쓰기 권한이 없어 Windows CI를 실행할 수 없습니다. 자동화하려면 **GitHub 설정 → Applications → Installed GitHub Apps → 연결 앱 → Configure**에서 저장소 접근과 요청된 권한 갱신을 승인하거나, 연결 서비스에서 GitHub를 재연결하세요. 앱이 해당 권한을 요청하지 않는다면 사용자 설정만으로 추가할 수 없으므로 서비스 제공자 지원이 필요합니다. 비밀 토큰을 대화에 붙여 넣지 마세요. 이 권한은 이미 만들어진 설치본을 다운로드하는 데에는 필요하지 않습니다.
+이번 정식 릴리스는 Windows 11 로컬 환경에서 빌드·게시·설치 검증했습니다. GitHub Actions 실행 결과로 대체해 보고하지 않습니다.
 
-직접 빌드는 PR #2 브랜치를 내려받은 뒤 .NET 10 SDK, PowerShell 7, 공식 NSIS 3.x가 설치된 Windows에서 실행합니다.
+직접 빌드는 main 브랜치를 내려받은 뒤 .NET 10 SDK, PowerShell 7, 공식 NSIS 3.x가 설치된 Windows에서 실행합니다.
 
 ```powershell
 dotnet run --project desktop/TempChain.Chat.Tests/TempChain.Chat.Tests.csproj -c Release
@@ -35,9 +35,9 @@ if ($LASTEXITCODE -ne 0) { throw '테스트 실패' }
 ./desktop/scripts/Build-Desktop.ps1 -Version 1.1.0 -NsisPath 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-결과는 `dist/TempChainChat-Setup-1.1.0.exe`, `dist/TempChainChat-1.1.0-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 사전 배포본 설치는 기존 설치를 갱신하므로 테스트 PC를 권장합니다. 자동 업데이트는 제공하지 않습니다.
+결과는 `dist/TempChainChat-Setup-1.1.0.exe`, `dist/TempChainChat-1.1.0-win-x64.zip`, `dist/SHA256SUMS.txt`입니다. 설치는 기존 설치를 갱신하며 사용자 설정을 보존합니다. 자동 업데이트는 제공하지 않습니다.
 
-코어 회귀 테스트 75개와 Linux의 Windows 대상 WPF 빌드는 통과했습니다. Windows UI·실제 설치/제거·COM 바로가기·실제 NAS의 두 계정 생성/초대/폐쇄는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
+Windows WPF 빌드와 코어 회귀 테스트 75개가 통과했습니다. 이 PC에서 실제 설치 업데이트, 배포 파일 472개 일치, 사용자 파일 321개 보존 및 설치 바로가기를 확인했습니다. 실제 NAS의 두 계정 생성/초대/폐쇄와 제거는 아직 현장 검증하지 않았습니다. 클라이언트 스키마는 NAS의 공식 `synochat-common.js`와 대조했고 실제 방을 개발 중 임의로 변경하지 않았습니다.
 
 Linux 교차 빌드 환경에서는 먼저 자체 포함 게시물을 만들고 아래 스크립트로 같은 NSIS 소스·체크섬을 사용할 수 있습니다. 이 방식도 Windows 실행 검증을 대신하지 않습니다.
 

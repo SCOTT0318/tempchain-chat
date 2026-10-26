@@ -2,20 +2,20 @@
 
 템프체인 사내 전용 Windows 메신저입니다. 로그인, 사용자·대화 목록, 메시지 화면과 입력창을 WPF 컨트롤로 직접 구현했습니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 적용했습니다.
 
-## v1.1.0 사전 배포 개발
+## v1.1.0 정식 릴리스
 
 바탕화면·시작 메뉴 바로가기 생성, 애니메이션·1~60초 알림 시간·소리 설정, 다른 방 새 메시지 알림, 비공개/공개 채팅방 생성·직원 초대·나가기·전체 폐쇄를 추가했습니다. 삭제(폐쇄)는 방 이름 재입력·동의와 NAS 권한 검사를 거치며 영구 기록 삭제를 보장하지 않습니다.
 
-[기능·Windows 확인 절차·GitHub 권한 안내](desktop/README.md#v110-사전-배포-기능-및-확인-방법) · [소스 변경 PR #2](https://github.com/SCOTT0318/tempchain-chat/pull/2)
+[기능·Windows 확인 절차·GitHub 권한 안내](desktop/README.md#v110-기능-및-확인-방법) · [소스 변경 PR #2](https://github.com/SCOTT0318/tempchain-chat/pull/2)
 
-새 버전은 Windows 현장 검증 전 사전 배포 대상입니다. 아래 기존 설치 링크와 확인 기록은 **v1.0.0** 기준이며, 새 버전의 실제 NAS 생성·초대·알림·설치 성공을 의미하지 않습니다. 파일 전송·스레드·암호화 대화 등은 아직 지원하지 않습니다.
+Windows 설치 업데이트와 사용자 파일 보존을 확인했습니다. 상세 검증 및 남은 현장 확인 항목은 [v1.1.0 릴리스 노트](docs/RELEASE-v1.1.0.md)에 있습니다. 파일 전송·스레드·암호화 대화 등은 아직 지원하지 않습니다.
 
 ## 실행
 
-GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.0.0/TempChainChat-Setup-1.0.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.0/TempChainChat-Setup-1.1.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-- **설치 EXE:** `TempChainChat-Setup-1.0.0.exe`를 실행합니다. 현재 Windows 사용자용 프로그램과 바로가기를 만듭니다.
-- **ZIP:** `TempChainChat-1.0.0-win-x64.zip` 전체를 압축 해제한 뒤 `TempChain.Chat.exe`를 실행합니다.
+- **설치 EXE:** `TempChainChat-Setup-1.1.0.exe`를 실행합니다. 현재 Windows 사용자용 프로그램과 바로가기를 만듭니다.
+- **ZIP:** `TempChainChat-1.1.0-win-x64.zip` 전체를 압축 해제한 뒤 `TempChain.Chat.exe`를 실행합니다.
 
 앱의 로그인 화면에서 기존 NAS 사용자 이름·비밀번호와 필요한 일회용 인증 코드를 입력합니다. 직원이 서버 주소를 입력하거나 변경할 필요가 없으며, 로그인·메신저·설정 화면에 주소를 표시하지 않습니다. 접속 경로는 회사 배포본에서 중앙 관리합니다.
 
@@ -33,7 +33,7 @@ Windows 11 x64를 대상으로 하며 배포본에 .NET 실행 환경을 포함�
 
 숨기기는 본인 목록에만 적용하며 메시지를 삭제하거나 다른 참여자의 대화를 제거하지 않습니다. 첫 버전은 텍스트 대화에 집중합니다. 암호화된 대화의 해독·전송, 파일 업로드·다운로드, 스레드·투표 및 Socket.IO 기반 실시간 이벤트는 지원 범위에 포함하지 않습니다. 새 메시지는 3초 간격 조회로 반영합니다.
 
-## 확인 상태
+## v1.0.0에서 확인한 내용
 
 네이티브 자동 테스트 41개와 선택 연동 테스트 45개가 통과했습니다. 최신 설치본에서 실제 NAS 로그인, 직원 24명 조회와 나에게 보내기 메시지 전송·재조회를 확인했습니다. 사외 GitHub 실행 서버의 HTTPS 인증서·API 연결·미인증 대화 접근 차단 검사도 통과했습니다. 설치 파일 472개의 해시와 기존 사용자 설정 보존을 확인했습니다. 직원 두 명 사이의 송수신과 실제 외부 단말의 계정 인증·송수신은 추가 현장 확인 항목입니다. [v1.0.0 릴리스 노트](docs/RELEASE-v1.0.0.md)
 
