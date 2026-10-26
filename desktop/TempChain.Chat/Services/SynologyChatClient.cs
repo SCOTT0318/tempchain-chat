@@ -18,13 +18,14 @@ public sealed class SynologyApiException : Exception
 }
 
 /// <summary>Normal employee session API; credentials and session tokens stay in memory.</summary>
-public sealed class SynologyChatClient : IDisposable
+public sealed partial class SynologyChatClient : IDisposable
 {
     private const int MaximumResponseBytes = 8 * 1024 * 1024;
     private readonly HttpClient http;
     private readonly Uri origin;
     private readonly Dictionary<string, ApiDescription> apis = new(StringComparer.Ordinal);
     private readonly Dictionary<long, ChatUser> users = new();
+    private readonly HashSet<long> inviteableUsers = new();
     private readonly Dictionary<long, ChatConversation> conversations = new();
     private readonly Dictionary<long, ConversationVisibility> visibility = new();
     private string? sid;
@@ -32,6 +33,7 @@ public sealed class SynologyChatClient : IDisposable
     private string? defaultNotificationPreference;
     private bool disposed;
     public ChatUser? CurrentUser { get; private set; }
+    public IReadOnlyList<ChatConversation> NotificationConversations => conversations.Values.ToArray();
 
     public SynologyChatClient(Uri serverUri, HttpMessageHandler? handler = null)
     {
@@ -107,6 +109,7 @@ public sealed class SynologyChatClient : IDisposable
         EnsureSession();
         var data = await SendAsync("SYNO.Chat.User", "list", 2, new(), true, ct);
         var result = new List<ChatUser>();
+        users.Clear(); inviteableUsers.Clear();
         foreach (var item in ReadArray(data, "users"))
         {
             var id = ReadLong(item, "user_id", "id");
@@ -120,7 +123,10 @@ public sealed class SynologyChatClient : IDisposable
             var type = ReadString(item, "type");
             var humanType = ReadString(item, "human_type");
             if (active && (type.Length == 0 || type == "human") && (humanType.Length == 0 || humanType == "dsm"))
+            {
                 result.Add(user);
+                inviteableUsers.Add(id);
+            }
         }
         return result;
     }
@@ -146,12 +152,14 @@ public sealed class SynologyChatClient : IDisposable
         foreach (var item in channelRecords)
         {
             var id = ReadLong(item, "channel_id", "id");
-            if (id <= 0 || !ReadBool(item, true, "is_joined")) continue;
+            if (id <= 0 || !ReadBool(item, true, "is_joined") || ReadBool(item, false, "is_closed")) continue;
             var members = ReadMembers(item);
             var name = ReadString(item, "name", "channel_name", "display_name");
             var type = ReadString(item, "type", "channel_type");
+            var directType = type.Length == 0 || type.Contains("anonymous", StringComparison.OrdinalIgnoreCase) ||
+                type.Contains("direct", StringComparison.OrdinalIgnoreCase);
             var self = string.Equals(type, "synobot", StringComparison.OrdinalIgnoreCase) ||
-                (CurrentUser is not null && members.Count == 1 && members[0] == CurrentUser.Id);
+                (directType && CurrentUser is not null && members.Count == 1 && members[0] == CurrentUser.Id);
             if (self) name = "나에게 보내기";
             else if (string.IsNullOrWhiteSpace(name) && id == 1) name = "일반";
             else if (string.IsNullOrWhiteSpace(name) && id == 2) name = "자유대화";
@@ -164,7 +172,8 @@ public sealed class SynologyChatClient : IDisposable
             var kind = self || type.Contains("anonymous", StringComparison.OrdinalIgnoreCase) ||
                 type.Contains("direct", StringComparison.OrdinalIgnoreCase) ? "direct" : "channel";
             var conversation = new ChatConversation(id, name, kind, members,
-                ReadBool(item, false, "encrypted", "is_encrypted", "isEncrypted"), self);
+                ReadBool(item, false, "encrypted", "is_encrypted", "isEncrypted"), self, type,
+                ReadLong(item, "last_post_at"), ReadLong(item, "unread"));
             var hidden = IsHiddenFromList(item, type, self, id, defaultNotificationPreference);
             allConversations[id] = conversation;
             allVisibility[id] = new ConversationVisibility(ReadLong(item, "last_hide_at"),
@@ -521,7 +530,7 @@ public sealed class SynologyChatClient : IDisposable
     private void ClearSession()
     {
         sid = null; synoToken = null; defaultNotificationPreference = null;
-        CurrentUser = null; users.Clear(); conversations.Clear(); visibility.Clear();
+        CurrentUser = null; users.Clear(); inviteableUsers.Clear(); conversations.Clear(); visibility.Clear(); roomPermissions.Clear();
     }
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);

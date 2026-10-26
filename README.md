@@ -2,6 +2,14 @@
 
 템프체인 사내 전용 Windows 메신저입니다. 로그인, 사용자·대화 목록, 메시지 화면과 입력창을 WPF 컨트롤로 직접 구현했습니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 적용했습니다.
 
+## v1.1.0 사전 배포 개발
+
+바탕화면·시작 메뉴 바로가기 생성, 애니메이션·1~60초 알림 시간·소리 설정, 다른 방 새 메시지 알림, 비공개/공개 채팅방 생성·직원 초대·나가기·전체 폐쇄를 추가했습니다. 삭제(폐쇄)는 방 이름 재입력·동의와 NAS 권한 검사를 거치며 영구 기록 삭제를 보장하지 않습니다.
+
+[기능·Windows 확인 절차·GitHub 권한 안내](desktop/README.md#v110-사전-배포-기능-및-확인-방법) · [소스 변경 PR #2](https://github.com/SCOTT0318/tempchain-chat/pull/2)
+
+새 버전은 Windows 현장 검증 전 사전 배포 대상입니다. 아래 기존 설치 링크와 확인 기록은 **v1.0.0** 기준이며, 새 버전의 실제 NAS 생성·초대·알림·설치 성공을 의미하지 않습니다. 파일 전송·스레드·암호화 대화 등은 아직 지원하지 않습니다.
+
 ## 실행
 
 GitHub 로그인 없이 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.0.0/TempChainChat-Setup-1.0.0.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.

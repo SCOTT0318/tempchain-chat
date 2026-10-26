@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.0.0',
+    [string]$Version = '1.1.0',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller
@@ -67,7 +67,7 @@ $payloadName = "TempChainChat-$Version-win-x64"
 $finalPayload = Assert-ChildPath (Join-Path $distRoot $payloadName) $distRoot
 $finalZip = Assert-ChildPath (Join-Path $distRoot "$payloadName.zip") $distRoot
 $finalInstaller = Assert-ChildPath (Join-Path $distRoot "TempChainChat-Setup-$Version.exe") $distRoot
-$stagingParent = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp'
+$stagingParent = Join-Path $repoRoot 'artifacts\packaging'
 $stagingName = 'TempChainChat-build-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $stagingRoot = Assert-ChildPath (Join-Path $stagingParent $stagingName) $stagingParent
 $publishStage = Join-Path $stagingRoot 'publish'
@@ -86,7 +86,7 @@ if ($PublishDirectory) {
     & $dotnetPath publish $projectPath -c Release -r win-x64 --self-contained true `
         --artifacts-path $buildArtifacts -o $publishStage --disable-build-servers `
         '-m:1' '-nr:false' '-p:PublishTrimmed=false' '-p:PublishSingleFile=false' `
-        '-p:DebugType=None' '-p:DebugSymbols=false'
+        '-p:DebugType=None' '-p:DebugSymbols=false' "-p:Version=$Version"
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish 실패: $LASTEXITCODE" }
 }
 
@@ -124,7 +124,7 @@ foreach ($directory in $directories) {
 $stagedInstaller = Join-Path $stagingRoot "TempChainChat-Setup-$Version.exe"
 if (-not $SkipInstaller) {
     if (-not $NsisPath) {
-        $bundledCompiler = Join-Path $stagingParent 'TempChainChat-tools\nsis-3.13\makensis.exe'
+        $bundledCompiler = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp\TempChainChat-tools\nsis-3.13\makensis.exe'
         if (Test-Path -LiteralPath $bundledCompiler -PathType Leaf) {
             $NsisPath = $bundledCompiler
         } else {
