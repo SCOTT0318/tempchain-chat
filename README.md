@@ -2,13 +2,13 @@
 
 템프체인 사내 전용 Windows 메신저입니다. 로그인, 사용자·대화 목록, 메시지 화면과 입력창을 WPF 컨트롤로 직접 구현했습니다. 제공받은 TEMPCHAIN 원본 로고와 고해상도 아이콘을 적용했습니다.
 
-## v1.1.2 정식 릴리스
+## v1.1.3 정식 릴리스
 
 바탕화면·시작 메뉴 바로가기 생성, 3·4·5초 알림 시간·보낸 사람 표시 설정, 다른 방 새 메시지 알림, 비공개/공개 채팅방 생성·직원 초대·나가기·전체 폐쇄를 추가했습니다. 삭제(폐쇄)는 방 이름 재입력·동의와 NAS 권한 검사를 거치며 영구 기록 삭제를 보장하지 않습니다.
 
-[기능·Windows 확인 절차·GitHub 권한 안내](desktop/README.md#v112-기능-및-확인-방법) · [소스 변경 PR #2](https://github.com/SCOTT0318/tempchain-chat/pull/2)
+[기능·Windows 확인 절차·GitHub 권한 안내](desktop/README.md#v113-기능-및-확인-방법) · [소스 변경 PR #2](https://github.com/SCOTT0318/tempchain-chat/pull/2)
 
-Windows 설치 업데이트와 사용자 파일 보존을 확인했습니다. 상세 검증 및 남은 현장 확인 항목은 [v1.1.2 릴리스 노트](docs/RELEASE-v1.1.2.md)에 있습니다. 파일 전송·스레드·암호화 대화 등은 아직 지원하지 않습니다.
+Windows 설치 업데이트와 사용자 파일 보존을 확인했습니다. 상세 검증 및 남은 현장 확인 항목은 [v1.1.3 릴리스 노트](docs/RELEASE-v1.1.3.md)에 있습니다. 파일 전송·스레드·암호화 대화 등은 아직 지원하지 않습니다.
 
 ## 버전 확인과 자동 업데이트
 
@@ -18,10 +18,10 @@ Windows 설치 업데이트와 사용자 파일 보존을 확인했습니다. �
 
 ## 실행
 
-저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.2/TempChainChat-Setup-1.1.2.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
+저장소 접근 권한이 있는 GitHub 계정으로 로그인한 뒤 [설치 EXE 직접 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.1.3/TempChainChat-Setup-1.1.3.exe)를 이용할 수 있습니다. ZIP과 체크섬은 [최신 Windows 앱 다운로드](https://github.com/SCOTT0318/tempchain-chat/releases/latest)에서 받습니다.
 
-- **설치 EXE:** `TempChainChat-Setup-1.1.2.exe`를 실행합니다. 현재 Windows 사용자용 프로그램과 바로가기를 만듭니다.
-- **ZIP:** `TempChainChat-1.1.2-win-x64.zip` 전체를 압축 해제한 뒤 `TempChain.Chat.exe`를 실행합니다.
+- **설치 EXE:** `TempChainChat-Setup-1.1.3.exe`를 실행합니다. 현재 Windows 사용자용 프로그램과 바로가기를 만듭니다.
+- **ZIP:** `TempChainChat-1.1.3-win-x64.zip` 전체를 압축 해제한 뒤 `TempChain.Chat.exe`를 실행합니다.
 
 앱의 로그인 화면에서 기존 NAS 사용자 이름·비밀번호를 입력합니다. 직원이 서버 주소를 입력하거나 변경할 필요가 없으며, 로그인·메신저·설정 화면에 주소를 표시하지 않습니다. 접속 경로는 회사 배포본에서 중앙 관리합니다.
 

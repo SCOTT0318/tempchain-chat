@@ -1,7 +1,7 @@
 Unicode true
 RequestExecutionLevel user
-SetCompressor /SOLID lzma
-SetDatablockOptimize on
+SetCompressor /FINAL zlib
+SetDatablockOptimize off
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
@@ -59,6 +59,8 @@ Var StartShortcutChoice
 Var DesktopShortcutCheckbox
 Var StartShortcutCheckbox
 Var UpdateMode
+Var VerifyMode
+Var VerifyDirectory
 
 Function ShortcutOptionsCreate
   !insertmacro MUI_HEADER_TEXT "바로가기 설정" "앱을 편하게 열 수 있는 위치를 선택하세요."
@@ -85,8 +87,20 @@ FunctionEnd
 
 Function .onInit
   SetShellVarContext current
+  StrCpy $VerifyMode "0"
   StrCpy $UpdateMode "0"
   ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/VERIFYDIR=" $VerifyDirectory
+  ${IfNot} ${Errors}
+    ${If} $VerifyDirectory == ""
+      SetErrorLevel 2
+      Abort
+    ${EndIf}
+    StrCpy $VerifyMode "1"
+    StrCpy $INSTDIR $VerifyDirectory
+    Return
+  ${EndIf}
   ClearErrors
   ${GetOptions} $0 "/UPDATE" $1
   ${IfNot} ${Errors}
@@ -115,12 +129,17 @@ FunctionEnd
 
 Section "TempChain Chat" MainSection
   SetShellVarContext current
+  ${If} $VerifyMode != "1"
   StrCpy $INSTDIR "$LOCALAPPDATA\Programs\TempChainChat"
+  ${EndIf}
   SetOutPath "$INSTDIR"
   SetOverwrite on
   ClearErrors
   File /r "${PUBLISH_DIR}\*.*"
   IfErrors install_failed
+  ${If} $VerifyMode == "1"
+    Goto install_done
+  ${EndIf}
   FileOpen $0 "$INSTDIR\.tempchain-chat-install" w
   IfErrors install_failed
   FileWrite $0 "TempChainChat managed application$\r$\n"

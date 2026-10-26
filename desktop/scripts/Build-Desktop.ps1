@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.1.2',
+    [string]$Version = '1.1.3',
     [string]$NsisPath,
     [string]$PublishDirectory,
     [switch]$SkipInstaller
@@ -67,7 +67,7 @@ $payloadName = "TempChainChat-$Version-win-x64"
 $finalPayload = Assert-ChildPath (Join-Path $distRoot $payloadName) $distRoot
 $finalZip = Assert-ChildPath (Join-Path $distRoot "$payloadName.zip") $distRoot
 $finalInstaller = Assert-ChildPath (Join-Path $distRoot "TempChainChat-Setup-$Version.exe") $distRoot
-$stagingParent = Join-Path $repoRoot 'artifacts\packaging'
+$stagingParent = 'C:\Users\Public\Documents\ESTsoft\CreatorTemp\TempChainChat-builds'
 $stagingName = 'TempChainChat-build-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $stagingRoot = Assert-ChildPath (Join-Path $stagingParent $stagingName) $stagingParent
 $publishStage = Join-Path $stagingRoot 'publish'
@@ -141,6 +141,20 @@ if (-not $SkipInstaller) {
         "/DPAYLOAD_UNINSTALL_INCLUDE=$uninstallInclude" "/DAPP_ICON=$iconPath" "/DESTIMATED_SIZE_KB=$estimatedSize" $installerSource
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $stagedInstaller -PathType Leaf)) {
         throw "NSIS 컴파일 실패: $LASTEXITCODE"
+    }
+    # Verify the bytes extracted by the actual installer before publishing any release assets.
+    $verificationRoot = Assert-ChildPath (Join-Path $stagingRoot 'installer-verification') $stagingRoot
+    $verificationArguments = '/S /VERIFYDIR="' + $verificationRoot + '"'
+    $verificationProcess = Start-Process -FilePath $stagedInstaller -ArgumentList $verificationArguments -WindowStyle Hidden -Wait -PassThru
+    if ($verificationProcess.ExitCode -ne 0) { throw "설치기 압축 해제 검증 실패: $($verificationProcess.ExitCode)" }
+    $extractedFiles = @(Get-PayloadFiles $verificationRoot)
+    if ($extractedFiles.Count -ne $payloadFiles.Count) { throw '설치기에서 추출한 파일 수가 일치하지 않습니다.' }
+    foreach ($file in $payloadFiles) {
+        $relative = [IO.Path]::GetRelativePath($publishStage, $file.FullName)
+        $extracted = Assert-ChildPath (Join-Path $verificationRoot $relative) $verificationRoot
+        if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $extracted).Hash) {
+            throw "설치기 압축 해제 파일 해시 불일치: $relative"
+        }
     }
 }
 

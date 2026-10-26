@@ -23,6 +23,10 @@ internal static class UpdateInstaller
             $resultPath = {{Literal(resultPath)}}
             $executable = {{Literal(executable)}}
             $version = {{Literal(version)}}
+            $installRoot = [IO.Path]::GetFullPath((Split-Path -Parent $executable))
+            $backup = Join-Path (Split-Path -Parent $installer) ('rollback-' + [Guid]::NewGuid().ToString('N'))
+            $backupComplete = $false
+            $previousVersion = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TempChainChat' -ErrorAction SilentlyContinue).DisplayVersion
             try {
                 $parent = Get-Process -Id {{parentId}} -ErrorAction SilentlyContinue
                 if ($parent) {
@@ -30,6 +34,8 @@ internal static class UpdateInstaller
                     if ($sameParent -and -not $parent.WaitForExit(60000)) { throw 'app did not exit' }
                 }
                 if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $digest) { throw 'checksum' }
+                Copy-Item -LiteralPath $installRoot -Destination $backup -Recurse -ErrorAction Stop
+                $backupComplete = $true
                 $setup = Start-Process -FilePath $installer -ArgumentList '/S','/UPDATE' -WindowStyle Hidden -Wait -PassThru
                 if ($setup.ExitCode -ne 0) { throw "installer exit $($setup.ExitCode)" }
                 $installedVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).ProductVersion.Split('+')[0]
@@ -37,7 +43,23 @@ internal static class UpdateInstaller
                 @{success=$true; version=$version; checkedAt=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $resultPath -Encoding UTF8
                 Start-Process -FilePath $executable
             } catch {
-                @{success=$false; checkedAt=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $resultPath -Encoding UTF8
+                $failure = $_.Exception.Message
+                $restored = $false
+                if ($backupComplete) {
+                    try {
+                        $prefix = $installRoot.TrimEnd('\') + '\'
+                        Get-ChildItem -LiteralPath $installRoot -File -Recurse | ForEach-Object {
+                            $absolute = [IO.Path]::GetFullPath($_.FullName)
+                            if (-not $absolute.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'rollback path' }
+                            $relative = $absolute.Substring($prefix.Length)
+                            if (-not (Test-Path -LiteralPath (Join-Path $backup $relative))) { Remove-Item -LiteralPath $absolute -Force }
+                        }
+                        Get-ChildItem -LiteralPath $backup -Force | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $installRoot -Recurse -Force }
+                        if ($previousVersion) { Set-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TempChainChat' -Name DisplayVersion -Value $previousVersion }
+                        $restored = $true
+                    } catch { $failure = $failure + '; restore: ' + $_.Exception.Message }
+                }
+                @{success=$false; restored=$restored; error=$failure; backup=$backup; checkedAt=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $resultPath -Encoding UTF8
                 Add-Type -AssemblyName System.Windows.Forms
                 [System.Windows.Forms.MessageBox]::Show('업데이트를 완료하지 못했습니다. 기존 앱을 다시 실행하고 설정에서 업데이트를 확인해 주세요.','TempChain Chat 업데이트') | Out-Null
                 exit 1
