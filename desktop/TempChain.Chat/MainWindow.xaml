@@ -71,12 +71,12 @@
           <Image Source="Assets/TempChainLogo.png" Width="180" HorizontalAlignment="Left" Margin="0,0,0,28"/>
           <TextBlock x:Name="LockHeading" FontSize="24" FontWeight="SemiBold"/>
         <TextBlock x:Name="LockDescription" TextWrapping="Wrap" Foreground="#657B91" Margin="0,12,0,22"/>
-          <TextBlock Text="잠금 암호 (6~128자)" Margin="0,0,0,7"/>
+          <TextBlock Text="잠금 암호" Margin="0,18,0,7"/>
+          <TextBlock Text="숫자 4자리·6자리 또는 문자 포함 6자 이상" FontSize="11" Foreground="#657B91" Margin="0,0,0,10"/>
           <PasswordBox x:Name="AppLockPasswordBox" MaxLength="128" Padding="12" AutomationProperties.Name="앱 잠금 암호" KeyDown="LockPassword_KeyDown"/>
           <StackPanel x:Name="LockConfirmPanel" Margin="0,16,0,0"><TextBlock Text="암호 확인" Margin="0,0,0,7"/><PasswordBox x:Name="AppLockConfirmBox" MaxLength="128" Padding="12" AutomationProperties.Name="앱 잠금 암호 확인" KeyDown="LockPassword_KeyDown"/></StackPanel>
           <TextBlock x:Name="LockErrorText" TextWrapping="Wrap" Foreground="#AD3E2A" Margin="0,14,0,10"/>
           <Button x:Name="LockSubmitButton" Content="잠금 해제" Style="{StaticResource PrimaryButton}" Click="Unlock_Click" Padding="15,12"/>
-          <Button Content="NAS 계정으로 다시 로그인" Click="ResetLogin_Click" Margin="0,12,0,0"/>
         </StackPanel>
       </Border>
     </Border>

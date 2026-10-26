@@ -72,7 +72,8 @@ public partial class MainWindow
         foreach (var window in OwnedWindows.Cast<Window>().ToArray()) window.Close();
         ChatView.Visibility = LoginView.Visibility = Visibility.Collapsed;
         LockHeading.Text = setup ? "앱 잠금 암호 설정" : "TChat 잠금";
-        LockDescription.Text = setup ? "다음 실행부터 NAS 로그인 없이 이 암호로 열 수 있습니다." : "잠금 암호를 입력해 주세요. 로그인은 유지됩니다.";
+        LockDescription.Text = setup ? "" : "잠금 암호를 입력해 주세요.";
+        LockDescription.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
         LockConfirmPanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockSubmitButton.Content = setup ? "암호 설정 및 시작" : "잠금 해제";
         LockErrorText.Text = ""; AppLockPasswordBox.Clear(); AppLockConfirmBox.Clear();
@@ -119,6 +120,12 @@ public partial class MainWindow
                     LockErrorText.Text = "잠금 암호가 올바르지 않습니다."; AppLockPasswordBox.Clear(); return;
                 }
                 if (client is null) await SignInAsync(login.UserName, login.Password);
+                if (sessionRecoveryRejected)
+                {
+                    await SignOutAsync();
+                    LoginErrorText.Text = "NAS 계정 정보가 변경되어 다시 로그인이 필요합니다.";
+                    return;
+                }
                 if (client is not null) UnlockApp();
                 else LockErrorText.Text = LoginErrorText.Text;
             }
@@ -131,11 +138,6 @@ public partial class MainWindow
     private void LockPassword_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { e.Handled = true; Unlock_Click(sender, e); }
-    }
-
-    private async void ResetLogin_Click(object sender, RoutedEventArgs e)
-    {
-        if (!unlocking) await SignOutAsync();
     }
 
     private void ChangeLockPassword_Click(object sender, RoutedEventArgs e)

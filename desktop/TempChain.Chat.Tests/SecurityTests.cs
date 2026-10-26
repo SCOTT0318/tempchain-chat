@@ -18,6 +18,15 @@ internal static class SecurityTests
             Throws<ArgumentException>(() => AppLockPassword.Create("u", "p", "12345"));
             Throws<ArgumentException>(() => AppLockPassword.Create("u", "p", new string('x',129)));
         });
+        Run("Lock passwords accept four or six digits or text of six or more characters", () => {
+            foreach (var password in new[] { "0123", "012345", "abc123", "abcdef", "한글암호여섯자", "secure password" })
+            {
+                var login = AppLockPassword.Create("u", "p", password);
+                Check(AppLockPassword.Verify(login, password));
+            }
+            foreach (var password in new[] { "", "123", "12345", "1234567", "12345678", "abcd", "abc12", "      " })
+                Throws<ArgumentException>(() => AppLockPassword.Create("u", "p", password));
+        });
         Run("Idle lock honors activity and exact timeout boundaries without depending on wall clock", () => {
             var timer = new AppLockTimer(1000);
             Check(!timer.IsDue(300999,5)); Check(timer.IsDue(301000,5));

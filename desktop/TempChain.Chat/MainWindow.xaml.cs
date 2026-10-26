@@ -164,6 +164,8 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             if (ReferenceEquals(client, candidate)) client = null;
+            if (storedUser is not null && ex is SynologyApiException { Code: 400 or 401 or 403 or 404 or 407 or 408 or 409 })
+                sessionRecoveryRejected = true;
             LoginErrorText.Text = FriendlyError(ex);
         }
         finally

@@ -36,11 +36,14 @@ class Program {
   var field=typeof(MainWindow).GetField("pendingLogin",BindingFlags.Instance|BindingFlags.NonPublic)!;
   field.SetValue(main,((string,string)?)("fixture-user","fixture-nas-password"));
   Invoke(main,"ShowSecurityGate",true);
+  if(((TextBlock)main.FindName("LockDescription")).Visibility!=Visibility.Collapsed) throw new Exception("setup description must be hidden");
+  var markup=File.ReadAllText("desktop/TempChain.Chat/MainWindow.xaml");
+  if(markup.Contains("NAS 계정으로 다시 로그인")) throw new Exception("removed re-login button remains");
   if(((StackPanel)main.FindName("LockConfirmPanel")).Visibility!=Visibility.Visible) throw new Exception("setup confirmation absent");
   Render(main,Path.Combine(root,"setup.png"));
   typeof(MainWindow).GetField("client",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(main,new SynologyChatClient(new Uri("https://fixture.example.test/")));
-  ((PasswordBox)main.FindName("AppLockPasswordBox")).Password="fixture-lock-password";
-  ((PasswordBox)main.FindName("AppLockConfirmBox")).Password="fixture-lock-password";
+  ((PasswordBox)main.FindName("AppLockPasswordBox")).Password="0123";
+  ((PasswordBox)main.FindName("AppLockConfirmBox")).Password="0123";
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Collapsed) throw new Exception("setup did not finish");
   Invoke(main,"LockApp");
@@ -48,7 +51,7 @@ class Program {
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("wrong password unlocked app");
   typeof(MainWindow).GetField("nextUnlockAttempt",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(main,0L);
-  ((PasswordBox)main.FindName("AppLockPasswordBox")).Password="fixture-lock-password";
+  ((PasswordBox)main.FindName("AppLockPasswordBox")).Password="0123";
   Invoke(main,"Unlock_Click",main,new RoutedEventArgs()); WaitUnlock(main);
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Collapsed) throw new Exception("correct password did not unlock");
   Console.WriteLine("PASS WPF: initial password setup persists login; wrong password keeps lock; correct password unlocks without NAS logout.");

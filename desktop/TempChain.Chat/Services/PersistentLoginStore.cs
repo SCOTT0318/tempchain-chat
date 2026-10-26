@@ -75,7 +75,10 @@ public static class AppLockPassword
 {
     public static SavedLogin Create(string userName, string password, string lockPassword)
     {
-        if (lockPassword.Length < 6 || lockPassword.Length > 128) throw new ArgumentException("잠금 암호는 6~128자로 입력해 주세요.");
+        var digitsOnly = lockPassword.Length > 0 && System.Linq.Enumerable.All(lockPassword, ch => ch is >= '0' and <= '9');
+        if (lockPassword.Length > 128 || (digitsOnly ? lockPassword.Length is not (4 or 6) :
+                lockPassword.Length < 6 || string.IsNullOrWhiteSpace(lockPassword)))
+            throw new ArgumentException("숫자는 4자리 또는 6자리, 문자를 포함한 암호는 6자 이상으로 입력해 주세요.");
         var salt = RandomNumberGenerator.GetBytes(16);
         return new SavedLogin(userName, password, Convert.ToBase64String(salt),
             Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(lockPassword, salt, 210000, HashAlgorithmName.SHA256, 32)));
