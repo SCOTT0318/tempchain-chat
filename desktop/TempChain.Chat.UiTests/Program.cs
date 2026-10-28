@@ -142,6 +142,9 @@ class Program {
   if(((Image)main.FindName("LockLogo")).HorizontalAlignment!=HorizontalAlignment.Center || ((TextBlock)main.FindName("LockHeading")).Visibility!=Visibility.Collapsed) throw new Exception("unlock requires centered logo without heading");
   if(main.Width>450 || ((Button)main.FindName("LockSubmitButton")).Visibility!=Visibility.Collapsed) throw new Exception("locked window must be compact with automatic unlock");
   Render(main,Path.Combine(root,"native-lock-pin4.png"));
+  ((PinInput)main.FindName("LockPinInput")).Password="01";
+  Render(main,Path.Combine(root,"native-lock-filled.png"));
+  ((PinInput)main.FindName("LockPinInput")).Clear();
   ((PinInput)main.FindName("LockPinInput")).Password="9999";
   WaitUntil(()=>((TextBlock)main.FindName("LockErrorText")).Text.Contains("올바르지"));
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("wrong PIN unlocked automatically");
