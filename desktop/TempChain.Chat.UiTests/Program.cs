@@ -106,6 +106,8 @@ class Program {
   var room = new ConversationItem(new ChatConversation(19,"파일 전송 테스트","direct",new long[] {7},IsSelf:true),"파일 전송 테스트");
   Invoke(main,"SetConversationHeader",room);
   if(!((Button)main.FindName("AttachButton")).IsEnabled) throw new Exception("attachment picker disabled for normal conversation");
+  Render(main,Path.Combine(root,"composer-empty-small.png"));
+  RenderComposer(main,Path.Combine(root,"composer-empty-preview.png"));
   main.PendingFiles.Add(new PendingFile("C:\\fixtures\\보고서.xlsx"));
   main.PendingFiles.Add(new PendingFile("C:\\fixtures\\사진.png"));
   if(main.CanRestartForUpdate) throw new Exception("update restart loses pending attachments");
@@ -114,6 +116,10 @@ class Program {
   Render(main,Path.Combine(root,"file-upload-small.png"));
   main.Width=1180; main.Height=800;
   Render(main,Path.Combine(root,"file-upload.png"));
+  ((TextBox)main.FindName("MessageInput")).Text="첨부한 자료 확인 부탁드립니다.\n검토 의견은 이 대화에 남겨 주세요.";
+  Render(main,Path.Combine(root,"composer-multiline.png"));
+  RenderComposer(main,Path.Combine(root,"composer-attachments-preview.png"));
+  ((TextBox)main.FindName("MessageInput")).Clear();
   var remove = new Button { Tag=main.PendingFiles[0] };
   Invoke(main,"RemoveFile_Click",remove,new RoutedEventArgs());
   if(main.PendingFiles.Count!=1 || main.PendingFiles[0].Name!="사진.png") throw new Exception("attachment removal changed wrong file");
@@ -142,6 +148,12 @@ class Program {
  static void Render(Window window,string path) {
   var surface=(FrameworkElement)window.Content; surface.Measure(new Size(window.Width,window.Height)); surface.Arrange(new Rect(0,0,window.Width,window.Height));surface.UpdateLayout();
   var image=new RenderTargetBitmap((int)window.Width,(int)window.Height,96,96,PixelFormats.Pbgra32);image.Render(surface);
+  var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(image));using var file=File.Create(path);png.Save(file);
+ }
+ static void RenderComposer(MainWindow window,string path) {
+  var surface=(FrameworkElement)window.FindName("ComposerPanel");
+  var visual=new DrawingVisual(); using(var drawing=visual.RenderOpen()) { drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(244,247,251)),null,new Rect(0,0,surface.ActualWidth,surface.ActualHeight)); drawing.DrawRectangle(new VisualBrush(surface),null,new Rect(0,0,surface.ActualWidth,surface.ActualHeight)); }
+  var image=new RenderTargetBitmap((int)Math.Ceiling(surface.ActualWidth),(int)Math.Ceiling(surface.ActualHeight),96,96,PixelFormats.Pbgra32); image.Render(visual);
   var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(image));using var file=File.Create(path);png.Save(file);
  }
 }
