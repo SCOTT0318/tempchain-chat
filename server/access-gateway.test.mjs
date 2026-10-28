@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
-import { createAccessGateway, directoryMembers } from './access-gateway.mjs';
+import { Readable } from 'node:stream';
+import { createServer } from 'node:http';
+import { createAccessGateway, directoryMembers, proxyRequest } from './access-gateway.mjs';
 
 const member = (account, groups = ['erp']) => ({ account, uid: 1001, description: '홍길동 | 사원', email: account + '@example.test', groups });
 test('deployment compose includes tested gateway and inline startup with healthcheck and bounded logs', async () => {
@@ -45,7 +47,8 @@ test('multipart rejects missing sessions, duplicate routing, multiple files, wro
   const wrong = upload(); wrong.set('api', 'SYNO.API.Auth');
   const multiple = upload(); multiple.append('file', new Blob(['second']), 'second.txt');
   const oversize = upload('fixture-session', new Uint8Array(10 * 1024 * 1024 + 1));
-  for (const form of [duplicate, wrong, multiple, oversize]) assert.equal((await state.call(form)).error.code, 400);
+  for (const form of [duplicate, wrong, multiple]) assert.equal((await state.call(form)).error.code, 400);
+  assert.equal((await state.call(oversize)).error.code, 413);
   assert.equal(state.calls.length, 0);
 });
 async function fixture(t) {
@@ -58,6 +61,10 @@ async function fixture(t) {
         : new URLSearchParams(request.body.toString());
       state.lastForward = request;
       state.calls.push({ api: fields.get('api'), method: fields.get('method') });
+      if (fields.get('api') === 'SYNO.Chat.Post.File') {
+        assert.equal(request.streamResponse, true);
+        return { status: 200, headers: { 'content-type': 'application/octet-stream' }, body: Readable.from([Buffer.from([0, 255, 129])]) };
+      }
       let body;
       if (fields.get('api') === 'SYNO.API.Auth') body = { success: true, data: { sid: 'fixture-session' } };
       else if (fields.get('method') === 'login') body = fields.get('_sid') === 'bad-session'
@@ -74,6 +81,7 @@ async function fixture(t) {
   t.after(() => { server.closeAllConnections(); server.close(); });
   state.call = async (fields, path = '/webapi/entry.cgi') => (await fetch('http://127.0.0.1:' + server.address().port + path,
     { method: 'POST', body: fields instanceof FormData ? fields : new URLSearchParams(fields) })).json();
+  state.url = 'http://127.0.0.1:' + server.address().port + '/webapi/entry.cgi';
   return state;
 }
 
@@ -82,6 +90,30 @@ test('ERP membership is mandatory, including administrators; stale data fails cl
   const snapshot = { version: 1, generatedAt: now, users: [member('staff'), member('admin-only', ['administrators'])] };
   assert.deepEqual([...directoryMembers(snapshot).keys()], ['staff']);
   assert.throws(() => directoryMembers({ ...snapshot, generatedAt: now - 181000 }));
+});
+
+test('download streams binary only after session and current ERP membership checks', async t => {
+  const state = await fixture(t);
+  await state.call({ api: 'SYNO.API.Auth', method: 'login', account: 'staff' });
+  const fields = { api: 'SYNO.Chat.Post.File', method: 'get', version: '2', post_id: '33', _sid: 'fixture-session' };
+  const response = await fetch(state.url, { method: 'POST', body: new URLSearchParams(fields) });
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new Uint8Array([0, 255, 129]));
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  state.snapshot.users[0].groups = [];
+  const before = state.calls.length;
+  assert.equal((await state.call(fields)).error.code, 460);
+  assert.equal(state.calls.length, before);
+});
+
+test('upstream binary download streams beyond JSON response limit with backpressure', async t => {
+  const bytes = Buffer.alloc(9 * 1024 * 1024, 129);
+  const upstream = createServer((req, res) => { req.resume(); res.writeHead(200, { 'content-length': bytes.length, 'content-type': 'application/octet-stream' }); res.end(bytes); });
+  upstream.listen(0, '127.0.0.1'); await once(upstream, 'listening');
+  t.after(() => { upstream.closeAllConnections(); upstream.close(); });
+  const result = await proxyRequest({ upstream: 'http://127.0.0.1:' + upstream.address().port, path: '/webapi/entry.cgi', method: 'POST', headers: {}, body: Buffer.from('fixture'), streamResponse: true });
+  let received = 0;
+  for await (const chunk of result.body) { assert.equal(chunk[0], 129); received += chunk.length; }
+  assert.equal(received, bytes.length);
 });
 
 test('alternate and encoded routes never forward to DSM', async t => {

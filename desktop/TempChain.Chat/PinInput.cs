@@ -11,6 +11,7 @@ public sealed class PinInput : StackPanel
 {
     private int length = 4;
     private bool assigning;
+    public event EventHandler? PasswordChanged;
     public int Length
     {
         get => length;
@@ -25,6 +26,7 @@ public sealed class PinInput : StackPanel
             assigning = true;
             try { for (var i = 0; i < length; i++) ((PasswordBox)Children[i]).Password = i < value.Length ? value[i].ToString() : ""; }
             finally { assigning = false; }
+            PasswordChanged?.Invoke(this, EventArgs.Empty);
         }
     }
     public PinInput() { Orientation = Orientation.Horizontal; HorizontalAlignment = HorizontalAlignment.Center; Build(); }
@@ -36,16 +38,18 @@ public sealed class PinInput : StackPanel
         for (var i = 0; i < length; i++)
         {
             var index = i;
-            var box = new PasswordBox { Width = 46, Height = 54, MaxLength = 1, FontSize = 24,
+            var box = new PasswordBox { Width = 40, Height = 48, MaxLength = 1, FontSize = 22,
                 Padding = new Thickness(0, 9, 0, 9), Margin = new Thickness(i == 0 ? 0 : 8, 0, 0, 0),
                 HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
             AutomationProperties.SetName(box, $"암호 {i + 1}번째 숫자");
             box.GotKeyboardFocus += (_, _) => box.SelectAll();
             box.PreviewTextInput += (_, e) => e.Handled = e.Text.Any(ch => ch is < '0' or > '9');
             box.PasswordChanged += (_, _) => {
-                if (assigning || box.Password.Length == 0) return;
+                if (assigning) return;
+                if (box.Password.Length == 0) { PasswordChanged?.Invoke(this, EventArgs.Empty); return; }
                 if (box.Password.Any(ch => ch is < '0' or > '9')) { box.Clear(); return; }
                 if (index + 1 < length) ((PasswordBox)Children[index + 1]).Focus();
+                PasswordChanged?.Invoke(this, EventArgs.Empty);
             };
             box.PreviewKeyDown += (_, e) => {
                 if (e.Key == Key.Back && box.Password.Length == 0 && index > 0)
@@ -61,6 +65,7 @@ public sealed class PinInput : StackPanel
                 try { for (var n = 0; n < text.Length; n++) ((PasswordBox)Children[index + n]).Password = text[n].ToString(); }
                 finally { assigning = false; }
                 ((PasswordBox)Children[Math.Min(length - 1, index + text.Length)]).Focus();
+                PasswordChanged?.Invoke(this, EventArgs.Empty);
             });
             Children.Add(box);
         }

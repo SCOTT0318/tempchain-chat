@@ -111,7 +111,7 @@ class Program {
   main.PendingFiles.Add(new PendingFile("C:\\fixtures\\보고서.xlsx"));
   main.PendingFiles.Add(new PendingFile("C:\\fixtures\\사진.png"));
   if(main.CanRestartForUpdate) throw new Exception("update restart loses pending attachments");
-  main.Messages.Add(new MessageItem(new ChatMessage(1,19,7,"박범준 사원","",DateTimeOffset.Now,true,true,"보고서.xlsx")));
+  main.Messages.Add(new MessageItem(new ChatMessage(1,19,7,"박범준 사원","",DateTimeOffset.Now,true,true,"보고서.xlsx",123456,true)));
   ((StackPanel)main.FindName("MessageEmptyPanel")).Visibility=Visibility.Collapsed;
   Render(main,Path.Combine(root,"file-upload-small.png"));
   main.Width=1180; main.Height=800;
@@ -120,6 +120,15 @@ class Program {
   Render(main,Path.Combine(root,"composer-multiline.png"));
   RenderComposer(main,Path.Combine(root,"composer-attachments-preview.png"));
   ((TextBox)main.FindName("MessageInput")).Clear();
+  var validFile=Path.Combine(root,"정상 파일.txt"); File.WriteAllText(validFile,"fixture");
+  var largeFile=Path.Combine(root,"한도 초과.zip"); using(var large=File.Create(largeFile)) large.SetLength(SynologyChatClient.MaximumFileBytes+1);
+  main.PendingFiles.Clear();
+  Invoke(main,"AddSelectedFiles",new object[] {new[] {largeFile,validFile}});
+  if(main.PendingFiles.Count!=1 || main.PendingFiles[0].Name!="정상 파일.txt" || ((Border)main.FindName("FileSelectionNotice")).Visibility!=Visibility.Visible || !((TextBlock)main.FindName("FileSelectionError")).Text.Contains("10MB")) throw new Exception("mixed selection lost valid files or size details");
+  Render(main,Path.Combine(root,"upload-limit-notice.png"));
+  main.PendingFiles.Clear();
+  main.PendingFiles.Add(new PendingFile("C:\\fixtures\\보고서.xlsx"));
+  main.PendingFiles.Add(new PendingFile("C:\\fixtures\\사진.png"));
   var remove = new Button { Tag=main.PendingFiles[0] };
   Invoke(main,"RemoveFile_Click",remove,new RoutedEventArgs());
   if(main.PendingFiles.Count!=1 || main.PendingFiles[0].Name!="사진.png") throw new Exception("attachment removal changed wrong file");
@@ -131,6 +140,26 @@ class Program {
   ((Button)main.FindName("LockRailButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
   if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("rail lock button did not lock app");
   if(((Image)main.FindName("LockLogo")).HorizontalAlignment!=HorizontalAlignment.Center || ((TextBlock)main.FindName("LockHeading")).Visibility!=Visibility.Collapsed) throw new Exception("unlock requires centered logo without heading");
+  if(main.Width>450 || ((Button)main.FindName("LockSubmitButton")).Visibility!=Visibility.Collapsed) throw new Exception("locked window must be compact with automatic unlock");
+  Render(main,Path.Combine(root,"native-lock-pin4.png"));
+  ((PinInput)main.FindName("LockPinInput")).Password="9999";
+  WaitUntil(()=>((TextBlock)main.FindName("LockErrorText")).Text.Contains("올바르지"));
+  if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("wrong PIN unlocked automatically");
+  ((PinInput)main.FindName("LockPinInput")).Password="0123";
+  var cooldownCheckAt=Environment.TickCount64+400;
+  WaitUntil(()=>Environment.TickCount64>=cooldownCheckAt);
+  if(((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("automatic PIN unlock bypassed wrong-password cooldown");
+  WaitUntil(()=>((Border)main.FindName("LockOverlay")).Visibility==Visibility.Collapsed);
+  foreach(var entry in new[] { (Mode:"pin6",Password:"012345"), (Mode:"text",Password:"fixture-lock-password") }) {
+   var autoLogin=AppLockPassword.Create("fixture-user","fixture-nas-password",entry.Password);
+   typeof(MainWindow).GetField("savedLogin",BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(main,autoLogin);
+   Invoke(main,"ShowSecurityGate",false);
+   if(entry.Mode=="text") ((PasswordBox)main.FindName("AppLockPasswordBox")).Password=entry.Password;
+   else ((PinInput)main.FindName("LockPinInput")).Password=entry.Password;
+   WaitUntil(()=>((Border)main.FindName("LockOverlay")).Visibility==Visibility.Collapsed);
+  }
+  Console.WriteLine("PASS WPF: PIN4/PIN6/text unlock automatically without button or Enter; wrong PIN remains locked and cooldown respected; mixed oversize selection retains valid files.");
+  Invoke(main,"LockApp");
   var active=typeof(MainWindow).GetField("client",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(main)!;
   Invoke(main,"OnServerAccessRestriction",active,461); WaitUnlock(main);
   if(!new PersistentLoginStore(root).Exists || ((Border)main.FindName("LockOverlay")).Visibility!=Visibility.Visible) throw new Exception("directory outage must lock while retaining login");
@@ -139,6 +168,11 @@ class Program {
   main.Close(); app.Shutdown(); return 0;
  }
  static void Invoke(object target,string name,params object[] args)=>target.GetType().GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(target,args);
+ static void WaitUntil(Func<bool> done) {
+  var frame=new DispatcherFrame(); var timer=new DispatcherTimer { Interval=TimeSpan.FromMilliseconds(20) }; var until=Environment.TickCount64+10000;
+  timer.Tick+=(_,_)=> { if(done() || Environment.TickCount64>until) {timer.Stop();frame.Continue=false;} }; timer.Start(); Dispatcher.PushFrame(frame);
+  if(!done()) throw new Exception("automatic UI operation timed out");
+ }
  static void WaitUnlock(MainWindow window) {
   var field=typeof(MainWindow).GetField("unlocking",BindingFlags.Instance|BindingFlags.NonPublic)!;
   var frame=new DispatcherFrame(); var timer=new DispatcherTimer { Interval=TimeSpan.FromMilliseconds(20) }; var until=Environment.TickCount64+15000;

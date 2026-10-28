@@ -2,13 +2,13 @@
 
 TEMPCHAIN 사내 Windows 메신저입니다.
 
-## 개발 버전 1.4.0 · 파일 업로드
+## 1.4.0 · 파일 송수신·잠금 화면 개선
 
 대화 입력창의 **파일 첨부**에서 여러 파일을 선택하고 **보내기**로 한 번에 전송합니다. 파일당 10MB, 한 번에 최대 20개이며 선택 목록에서 개별 제거할 수 있습니다. 파일만 보내거나 텍스트와 함께 보낼 수 있고, 전송한 파일 이름을 대화에 표시합니다. 실패하면 다음 파일 전송을 멈추며 성공한 파일은 선택 목록에서 제거합니다.
 
-운영 사용 전 서버 접근 검사기도 함께 갱신해야 합니다. [1.4.0 구현·적용 안내](docs/RELEASE-v1.4.0.md)를 참고하세요. 아래 다운로드 링크는 기존 공개 버전입니다.
+파일 메시지의 저장 버튼으로 다운로드할 수 있습니다. 용량 초과 파일은 이름과 한도를 안내하고 정상 파일은 계속 첨부합니다. 잠금 화면은 암호가 일치하면 자동으로 열립니다. 서버 접근 검사기도 함께 갱신해야 합니다. [1.4.0 구현·적용 안내](docs/RELEASE-v1.4.0.md)를 참고하세요.
 
-[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.3.0/TChat-Setup-1.3.0.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.3.0/TChat-1.3.0-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.3.0)
+[설치 EXE](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.4.0/TChat-Setup-1.4.0.exe) · [ZIP](https://github.com/SCOTT0318/tempchain-chat/releases/download/v1.4.0/TChat-1.4.0-win-x64.zip) · [릴리스](https://github.com/SCOTT0318/tempchain-chat/releases/tag/v1.4.0)
 
 ## 1.3.0 변경
 

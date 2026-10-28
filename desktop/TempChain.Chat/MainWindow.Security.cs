@@ -22,10 +22,22 @@ public partial class MainWindow
     private string lockInputMode = "pin4";
     private readonly AppLockTimer lockTimer = new(Environment.TickCount64);
     private readonly DispatcherTimer securityTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer autoUnlockTimer = new();
+    private (double Width, double Height, double MinWidth, double MinHeight, double Left, double Top, WindowState State)? unlockedWindowSize;
 
     private void InitializeSecurity()
     {
         loginStore = new PersistentLoginStore(store.BaseDirectory);
+        LockPinInput.PasswordChanged += (_, _) => ScheduleAutoUnlock();
+        AppLockPasswordBox.PasswordChanged += (_, _) => ScheduleAutoUnlock();
+        autoUnlockTimer.Tick += (_, _) => {
+            autoUnlockTimer.Stop();
+            if (!securityLocked || settingLockPassword || unlocking) return;
+            if (Environment.TickCount64 < nextUnlockAttempt) { ScheduleAutoUnlock(); return; }
+            var password = lockInputMode == "text" ? AppLockPasswordBox.Password : LockPinInput.Password;
+            if (lockInputMode == "text" ? password.Length < (savedLogin?.LockMode == "" ? 4 : 6) : password.Length != LockPinInput.Length) return;
+            Unlock_Click(this, new RoutedEventArgs());
+        };
         InputManager.Current.PreProcessInput += OnSecurityInput;
         SystemEvents.SessionSwitch += OnWindowsSessionSwitch;
         securityTimer.Tick += (_, _) => {
@@ -34,6 +46,7 @@ public partial class MainWindow
         securityTimer.Start();
         Closed += (_, _) => {
             securityTimer.Stop();
+            autoUnlockTimer.Stop();
             InputManager.Current.PreProcessInput -= OnSecurityInput;
             SystemEvents.SessionSwitch -= OnWindowsSessionSwitch;
             pendingLogin = null; savedLogin = null;
@@ -70,6 +83,16 @@ public partial class MainWindow
     private void ShowSecurityGate(bool setup)
     {
         securityLocked = true; settingLockPassword = setup;
+        autoUnlockTimer.Stop();
+        if (unlockedWindowSize is null) unlockedWindowSize = (Width, Height, MinWidth, MinHeight, Left, Top, WindowState);
+        WindowState = WindowState.Normal;
+        MinWidth = 360; MinHeight = 540;
+        Width = 420; Height = setup ? 740 : 620;
+        if (unlockedWindowSize is { } bounds && double.IsFinite(bounds.Left) && double.IsFinite(bounds.Top))
+        { Left = bounds.Left + Math.Max(0, (bounds.Width - Width) / 2); Top = bounds.Top + Math.Max(0, (bounds.Height - Height) / 2); }
+        LockAccountText.Text = client?.CurrentUser?.DisplayName ?? savedLogin?.UserName ?? pendingLogin?.User ?? "TChat";
+        LockAccountInitial.Text = Initial(LockAccountText.Text);
+        LockStatusText.Text = setup ? "내 앱을 안전하게 잠그기" : "잠금모드 상태입니다";
         notification?.Close(); notification = null;
         foreach (var window in OwnedWindows.Cast<Window>().ToArray()) window.Close();
         ChatView.Visibility = LoginView.Visibility = Visibility.Collapsed;
@@ -78,6 +101,8 @@ public partial class MainWindow
         LockPasswordLabel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockConfirmPanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         LockSubmitButton.Content = setup ? "암호 설정 및 시작" : "잠금 해제";
+        LockSubmitButton.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
+        LockAutoHint.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
         LockErrorText.Text = "";
         LockModePanel.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
         lockInputMode = !setup && string.IsNullOrEmpty(savedLogin?.LockMode) ? "text" :
@@ -125,6 +150,8 @@ public partial class MainWindow
     private void UnlockApp()
     {
         securityLocked = settingLockPassword = false; pendingLogin = null;
+        autoUnlockTimer.Stop();
+        RestoreUnlockedWindowSize();
         LockOverlay.Visibility = Visibility.Collapsed;
         AppLockPasswordBox.Clear(); AppLockConfirmBox.Clear();
         LockPinInput.Clear(); LockPinConfirmInput.Clear();
@@ -156,10 +183,15 @@ public partial class MainWindow
             }
             else if (savedLogin is { } login)
             {
-                if (!await Task.Run(() => AppLockPassword.Verify(login, password)))
+                var matches = await Task.Run(() => AppLockPassword.Verify(login, password));
+                var currentPassword = lockInputMode == "text" ? AppLockPasswordBox.Password : LockPinInput.Password;
+                if (!securityLocked || currentPassword != password) { ScheduleAutoUnlock(); return; }
+                if (!matches)
                 {
                     nextUnlockAttempt = Environment.TickCount64 + 3000;
-                    LockErrorText.Text = "잠금 암호가 올바르지 않습니다."; AppLockPasswordBox.Clear(); LockPinInput.Clear(); FocusLockInput(); return;
+                    LockErrorText.Text = "잠금 암호가 올바르지 않습니다.";
+                    if (lockInputMode != "text") LockPinInput.Clear();
+                    FocusLockInput(); return;
                 }
                 if (string.IsNullOrEmpty(login.LockMode))
                 { savedLogin = login with { LockMode = AppLockPassword.ModeFor(password) }; loginStore.Save(savedLogin); }
@@ -183,6 +215,26 @@ public partial class MainWindow
         catch (ArgumentException ex) { LockErrorText.Text = ex.Message; }
         catch (Exception) { LockErrorText.Text = "로그인 정보를 안전하게 저장하지 못했습니다. 다시 시도해 주세요."; }
         finally { unlocking = false; LockSubmitButton.IsEnabled = true; }
+    }
+
+    private void ScheduleAutoUnlock()
+    {
+        autoUnlockTimer.Stop();
+        if (!securityLocked || settingLockPassword) return;
+        var password = lockInputMode == "text" ? AppLockPasswordBox.Password : LockPinInput.Password;
+        if (lockInputMode == "text" ? password.Length < (savedLogin?.LockMode == "" ? 4 : 6) : password.Length != LockPinInput.Length) return;
+        LockErrorText.Text = "";
+        autoUnlockTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(lockInputMode == "text" ? 550 : 100, nextUnlockAttempt - Environment.TickCount64));
+        autoUnlockTimer.Start();
+    }
+
+    private void RestoreUnlockedWindowSize()
+    {
+        if (unlockedWindowSize is not { } size) return;
+        MinWidth = size.MinWidth; MinHeight = size.MinHeight; Width = size.Width; Height = size.Height;
+        if (double.IsFinite(size.Left)) Left = size.Left;
+        if (double.IsFinite(size.Top)) Top = size.Top;
+        WindowState = size.State; unlockedWindowSize = null;
     }
 
     private void LockPassword_KeyDown(object sender, KeyEventArgs e)

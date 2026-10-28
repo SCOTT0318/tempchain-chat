@@ -212,7 +212,8 @@ public sealed partial class SynologyChatClient : IDisposable
             var fileName = item.TryGetProperty("file_props", out var fileProps) ? ReadString(fileProps, "name") : "";
             var hasAttachments = ReadArray(item, "attachments", "files").Any() || fileName.Length > 0 || ReadString(item, "type") == "file";
             result.Add(new ChatMessage(id, channelId, userId, userName,
-                text, sentAt, CurrentUser?.Id == userId, hasAttachments, fileName));
+                text, sentAt, CurrentUser?.Id == userId, hasAttachments, fileName,
+                ReadLong(fileProps, "size"), ReadString(item, "type") == "file" || fileName.Length > 0));
         }
         return result.OrderBy(message => message.SentAt).ThenBy(message => message.Id).ToArray();
     }
@@ -372,7 +373,9 @@ public sealed partial class SynologyChatClient : IDisposable
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken);
             if (!response.IsSuccessStatusCode)
-                throw new SynologyApiException((int)response.StatusCode, "서버가 요청을 처리하지 못했습니다.");
+                throw new SynologyApiException((int)response.StatusCode, response.StatusCode == System.Net.HttpStatusCode.RequestEntityTooLarge
+                    ? "서버에서 허용하는 파일 크기를 초과했습니다. 더 작은 파일을 선택해 주세요."
+                    : "서버가 요청을 처리하지 못했습니다.");
             if (response.Content.Headers.ContentLength > MaximumResponseBytes)
                 throw new SynologyApiException(0, "서버 응답이 허용 크기를 초과했습니다.");
             await using var stream = await response.Content.ReadAsStreamAsync(requestToken);
@@ -402,6 +405,7 @@ public sealed partial class SynologyChatClient : IDisposable
                         401 => "해당 대화에 접근할 수 없습니다.",
                         403 => "대화를 찾지 못했습니다.",
                         404 => "이 작업을 수행할 권한이 없습니다.",
+                        413 => "서버에서 허용하는 파일 크기를 초과했습니다. 더 작은 파일을 선택해 주세요.",
                         _ => "서버 요청을 완료하지 못했습니다."
                     } : "서버 요청을 완료하지 못했습니다.";
                 throw new SynologyApiException(code, message);

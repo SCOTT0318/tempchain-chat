@@ -25,6 +25,12 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
             throw new InvalidOperationException($"Expected {_steps.Count} more API calls.");
     }
 
+    public ScriptedHttpHandler ExpectFile(byte[] bytes, string contentType = "application/octet-stream", long? declaredLength = null)
+    {
+        _steps.Enqueue(new Step("SYNO.Chat.Post.File", "get", "", HttpStatusCode.OK, bytes, contentType, declaredLength));
+        return this;
+    }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -52,10 +58,17 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
         if (!fields.TryGetValue("api", out var api) || api != next.Api ||
             !fields.TryGetValue("method", out var method) || method != next.Method)
             throw new InvalidOperationException($"Expected API {next.Api}/{next.Method}; request routing differed.");
+        HttpContent content = next.Bytes is null ? new StringContent(next.Body, Encoding.UTF8, "application/json") : new ByteArrayContent(next.Bytes);
+        if (next.Bytes is not null)
+        {
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(next.ContentType);
+            content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
+            if (next.DeclaredLength is long size) content.Headers.ContentLength = size;
+        }
         return new HttpResponseMessage(next.Status)
         {
             RequestMessage = request,
-            Content = new StringContent(next.Body, Encoding.UTF8, "application/json")
+            Content = content
         };
     }
 
@@ -73,7 +86,8 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
         return fields;
     }
 
-    private sealed record Step(string Api, string Method, string Body, HttpStatusCode Status);
+    private sealed record Step(string Api, string Method, string Body, HttpStatusCode Status,
+        byte[]? Bytes = null, string ContentType = "application/octet-stream", long? DeclaredLength = null);
 }
 
 internal sealed record CapturedRequest(HttpMethod Method, Uri Uri, IReadOnlyDictionary<string, string> Fields);

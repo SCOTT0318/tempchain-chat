@@ -21,6 +21,7 @@ services:
         import { readFile, stat } from 'node:fs/promises';
         import { createHash } from 'node:crypto';
         import { pathToFileURL } from 'node:url';
+        import { pipeline } from 'node:stream/promises';
 
         const groupDenied = 460;
         const directoryUnavailable = 461;
@@ -78,9 +79,9 @@ services:
               if (request.method !== 'POST' || !/^\/webapi\/[A-Za-z0-9_.-]+\.cgi$/.test(url.pathname)) return error(104);
               const multipart = /^multipart\/form-data\s*;/i.test(request.headers['content-type'] || '');
               const limit = multipart ? 10 * 1024 * 1024 + 65536 : 2097152;
-              if (Number(request.headers['content-length']) > limit) return error(400);
+              if (Number(request.headers['content-length']) > limit) return error(413);
               const chunks = []; let size = 0;
-              for await (const chunk of request) { size += chunk.length; if (size > limit) return error(400); chunks.push(chunk); }
+              for await (const chunk of request) { size += chunk.length; if (size > limit) return error(413); chunks.push(chunk); }
               const body = Buffer.concat(chunks);
               let fields;
               if (multipart) {
@@ -93,7 +94,8 @@ services:
                       if (fields.has(name) || value.length > 16384) return error(400);
                       fields.set(name, value);
                     } else {
-                      if (name !== 'file' || ++fileCount > 1 || value.size > 10 * 1024 * 1024) return error(400);
+                      if (value.size > 10 * 1024 * 1024) return error(413);
+                      if (name !== 'file' || ++fileCount > 1) return error(400);
                     }
                   }
                   if (fileCount !== 1 || fields.get('api') !== 'SYNO.Chat.Post' || fields.get('method') !== 'create' ||
@@ -101,7 +103,8 @@ services:
                 } catch { return error(400); }
               } else fields = new URLSearchParams(body.toString('utf8'));
               const api = fields.get('api'); const method = fields.get('method');
-              const call = () => forward({ upstream, path: request.url, method: 'POST', headers: request.headers, body });
+              const call = () => forward({ upstream, path: request.url, method: 'POST', headers: request.headers, body,
+                streamResponse: api === 'SYNO.Chat.Post.File' && method === 'get' });
               const resolveUser = async (user, sid) => {
                 const id = user?.user_id ?? user?.id;
                 if (!id || !sid) return undefined;
@@ -164,18 +167,24 @@ services:
                 }
                 return send(json, result.status);
               }
-              response.writeHead(result.status, result.headers); response.end(result.body);
+              response.writeHead(result.status, { ...result.headers, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+              if (result.body?.pipe) await pipeline(result.body, response);
+              else response.end(result.body);
             } catch { if (!response.headersSent) error(directoryUnavailable); else response.destroy(); }
           });
         }
 
-        export async function proxyRequest({ upstream, path, method, headers, body }) {
+        export async function proxyRequest({ upstream, path, method, headers, body, streamResponse = false }) {
           return new Promise((resolve, reject) => {
             const destination = new URL(path, upstream);
             if (destination.origin !== new URL(upstream).origin) return reject(new Error('invalid_upstream'));
             const outgoing = { ...headers, 'content-length': String(body.length), 'accept-encoding': 'identity' };
             delete outgoing.connection; delete outgoing['transfer-encoding'];
             const request = httpRequest(destination, { method, headers: outgoing }, response => {
+              if (streamResponse) {
+                const clean = { ...response.headers }; delete clean['transfer-encoding']; delete clean.connection;
+                return resolve({ status: response.statusCode, headers: clean, body: response });
+              }
               const chunks = []; let size = 0;
               response.on('data', chunk => { size += chunk.length; if (size > 8388608) { response.destroy(); reject(new Error('too_large')); } else chunks.push(chunk); });
               response.on('error', reject);
@@ -184,7 +193,7 @@ services:
                 resolve({ status: response.statusCode, headers: clean, body: Buffer.concat(chunks) });
               });
             });
-            request.setTimeout(/^multipart\/form-data/i.test(headers['content-type'] || '') ? 300000 : 15000, () => request.destroy(new Error('timeout')));
+            request.setTimeout(streamResponse || /^multipart\/form-data/i.test(headers['content-type'] || '') ? 300000 : 15000, () => request.destroy(new Error('timeout')));
             request.on('error', reject); request.end(body);
           });
         }

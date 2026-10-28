@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private bool exitRequested;
     private bool signingIn;
     private bool sending;
+    private bool downloading;
     private bool openingConversation;
     private bool hidingConversation;
     private bool showingContacts;
@@ -119,7 +120,7 @@ public partial class MainWindow : Window
 
     private void InstallUpdate_Click(object sender, RoutedEventArgs e) => AppUpdateManager.Instance.InstallAndRestart();
     public void ShutdownForUpdate() { exitRequested = true; Application.Current.Shutdown(); }
-    public bool CanRestartForUpdate => !signingIn && !unlocking && !settingLockPassword && !sending && !openingConversation && !hidingConversation && !managingRoom && PendingFiles.Count == 0 && string.IsNullOrWhiteSpace(MessageInput.Text);
+    public bool CanRestartForUpdate => !signingIn && !unlocking && !settingLockPassword && !sending && !downloading && !openingConversation && !hidingConversation && !managingRoom && PendingFiles.Count == 0 && string.IsNullOrWhiteSpace(MessageInput.Text);
 
     private async void Login_Click(object sender, RoutedEventArgs e) => await SignInAsync();
 
@@ -350,6 +351,7 @@ public partial class MainWindow : Window
         selectedChannelId = item.Id;
         messagesChannelId = null;
         Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear(); PendingFiles.Clear();
+        FileSelectionNotice.Visibility = Visibility.Collapsed;
         SetConversationHeader(item);
         MessageEmptyPanel.Visibility = Visibility.Visible;
         EmptyHeadingText.Text = "대화를 불러오는 중";
@@ -374,6 +376,7 @@ public partial class MainWindow : Window
     {
         selectedChannelId = null; messagesChannelId = null;
         Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear(); PendingFiles.Clear();
+        FileSelectionNotice.Visibility = Visibility.Collapsed;
         AttachButton.IsEnabled = false;
         MessageInput.IsEnabled = false; SendButton.IsEnabled = false;
         HideConversationButton.IsEnabled = false;
@@ -436,16 +439,47 @@ public partial class MainWindow : Window
         if (sending || client is null || selectedChannelId is null || !MessageInput.IsEnabled) return;
         var picker = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Title = "보낼 파일 선택 (파일당 10MB, 최대 20개)", CheckFileExists = true };
         if (picker.ShowDialog(this) != true) return;
-        var paths = picker.FileNames.Where(path => !PendingFiles.Any(file => string.Equals(file.Path, path, StringComparison.OrdinalIgnoreCase))).ToArray();
-        if (PendingFiles.Count + paths.Length > SynologyChatClient.MaximumFilesPerBatch)
-        { StatusText.Text = "파일은 한 번에 최대 20개까지 선택할 수 있습니다."; return; }
+        AddSelectedFiles(picker.FileNames);
+    }
+
+    private void AddSelectedFiles(IEnumerable<string> paths)
+    {
+        var rejected = new List<string>();
+        foreach (var path in paths)
+        {
+            if (PendingFiles.Any(file => string.Equals(file.Path, path, StringComparison.OrdinalIgnoreCase))) continue;
+            try
+            {
+                SynologyChatClient.ValidateUploadFile(path);
+                if (PendingFiles.Count >= SynologyChatClient.MaximumFilesPerBatch)
+                    rejected.Add($"{Path.GetFileName(path)}: 한 번에 최대 20개까지 첨부할 수 있습니다.");
+                else PendingFiles.Add(new PendingFile(path));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SynologyApiException)
+            { rejected.Add(ex is SynologyApiException ? ex.Message : $"{Path.GetFileName(path)}: 파일을 읽을 수 없습니다."); }
+        }
+        FileSelectionNotice.Visibility = rejected.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        FileSelectionError.Text = rejected.Count == 0 ? "" : $"첨부하지 못한 파일 {rejected.Count}개\n" + string.Join("\n", rejected);
+        StatusText.Text = PendingFiles.Count > 0 ? $"파일 {PendingFiles.Count}개 선택 · 파일당 10MB, 최대 20개" : "첨부 가능한 파일이 없습니다.";
+    }
+    private void DismissFileNotice_Click(object sender, RoutedEventArgs e) => FileSelectionNotice.Visibility = Visibility.Collapsed;
+
+    private async void DownloadFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (downloading || securityLocked || client is not { } active || sender is not Button { Tag: MessageItem item } || !item.Message.IsFile) return;
+        var picker = new Microsoft.Win32.SaveFileDialog { Title = "첨부파일 저장", FileName = SynologyChatClient.SafeDownloadName(item.Message.FileName), Filter = "모든 파일|*.*", OverwritePrompt = true };
+        if (picker.ShowDialog(this) != true) return;
+        var generation = sessionGeneration;
+        downloading = true;
         try
         {
-            foreach (var path in paths) SynologyChatClient.ValidateUploadFile(path);
-            foreach (var path in paths) PendingFiles.Add(new PendingFile(path));
-            StatusText.Text = $"파일 {PendingFiles.Count}개 선택 · 보내기를 누르면 전송합니다.";
+            StatusText.Text = $"다운로드 중 · {item.Message.FileName}";
+            await active.DownloadFileAsync(item.Message.ChannelId, item.Message.Id, picker.FileName, sessionCancellation?.Token ?? CancellationToken.None);
+            if (active == client && generation == sessionGeneration) StatusText.Text = $"저장 완료 · {Path.GetFileName(picker.FileName)}";
         }
-        catch (Exception ex) { StatusText.Text = ex is IOException ? ex.Message : FriendlyError(ex); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { if (active == client && generation == sessionGeneration) StatusText.Text = ex is IOException or UnauthorizedAccessException ? "파일을 저장하지 못했습니다. 저장 위치와 여유 공간을 확인해 주세요." : FriendlyError(ex); }
+        finally { downloading = false; }
     }
     private void RemoveFile_Click(object sender, RoutedEventArgs e)
     {
@@ -463,8 +497,20 @@ public partial class MainWindow : Window
         if (active is null || channelId is null || sending || (string.IsNullOrEmpty(text) && files.Length == 0)) return;
         if (Conversations.FirstOrDefault(item => item.Id == channelId)?.Data.IsEncrypted != false) return;
         if (text.Length > 4000) { StatusText.Text = "메시지는 4,000자 이내로 입력해 주세요."; return; }
-        try { foreach (var file in files) SynologyChatClient.ValidateUploadFile(file.Path); }
-        catch (Exception ex) { StatusText.Text = ex is IOException ? ex.Message : FriendlyError(ex); return; }
+        var rejected = new List<string>();
+        foreach (var file in files)
+        {
+            try { SynologyChatClient.ValidateUploadFile(file.Path); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SynologyApiException)
+            { PendingFiles.Remove(file); rejected.Add(ex is SynologyApiException ? ex.Message : $"{file.Name}: 파일을 읽을 수 없습니다."); }
+        }
+        if (rejected.Count > 0)
+        {
+            FileSelectionError.Text = $"첨부하지 못한 파일 {rejected.Count}개\n" + string.Join("\n", rejected);
+            FileSelectionNotice.Visibility = Visibility.Visible;
+        }
+        files = PendingFiles.ToArray();
+        if (text.Length == 0 && files.Length == 0) { StatusText.Text = "보낼 수 있는 파일이 없습니다. 첨부 안내를 확인해 주세요."; return; }
         sending = true; SendButton.IsEnabled = AttachButton.IsEnabled = MessageInput.IsEnabled = false;
         var entered = false;
         var sentFiles = 0;
@@ -723,6 +769,8 @@ public partial class MainWindow : Window
         try { loginStore.Clear(); }
         catch (Exception) { LockErrorText.Text = "저장된 로그인을 지우지 못했습니다. 다시 시도해 주세요."; return; }
         savedLogin = null; pendingLogin = null; securityLocked = settingLockPassword = false;
+        autoUnlockTimer.Stop();
+        RestoreUnlockedWindowSize();
         LockOverlay.Visibility = Visibility.Collapsed;
         var old = client;
         client = null; ++sessionGeneration;
@@ -839,6 +887,9 @@ public sealed class MessageItem
     public string FullTime => Message.SentAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     public Visibility AttachmentVisibility => Message.HasAttachments ? Visibility.Visible : Visibility.Collapsed;
     public string AttachmentLabel => string.IsNullOrWhiteSpace(Message.FileName) ? "첨부파일" : "📎 " + Message.FileName;
+    public Visibility DownloadVisibility => Message.IsFile ? Visibility.Visible : Visibility.Collapsed;
+    public string FileLabel => string.IsNullOrWhiteSpace(Message.FileName) ? "첨부파일" : Message.FileName;
+    public string FileDetail => Message.FileSize > 0 ? SynologyChatClient.FormatFileSize(Message.FileSize) + " · 다른 이름으로 저장" : "다른 이름으로 저장";
     public MessageItem(ChatMessage message) => Message = message;
 }
 

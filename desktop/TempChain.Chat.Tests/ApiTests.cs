@@ -186,6 +186,53 @@ internal static class ApiTests
             Check(message.HasAttachments); Equal("보고서.pdf", message.FileName);
             handler.AssertComplete();
         });
+        await RunAsync("File download preserves binary beyond 8MB and keeps secrets in authenticated POST body", async () =>
+        {
+            var root = Path.Combine(Path.GetTempPath(), "tchat-download-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+            try
+            {
+                var bytes = new byte[9 * 1024 * 1024]; bytes[0] = 255; bytes[^1] = 129;
+                var handler = LoginHandler().ExpectFile(bytes).ExpectFile(System.Text.Encoding.UTF8.GetBytes("{\"success\":false}"), "application/json");
+                using var client = new SynologyChatClient(Server, handler); await client.LoginAsync("park", Password);
+                var target = Path.Combine(root, "한글 파일.bin"); await client.DownloadFileAsync(ChannelId, 33, target);
+                Check((await File.ReadAllBytesAsync(target)).SequenceEqual(bytes));
+                var request = handler.Requests[^1]; Equal(HttpMethod.Post, request.Method); Equal("", request.Uri.Query);
+                Equal("33", request.Fields["post_id"]); Equal(Sid, request.Fields["_sid"]); Equal(Token, request.Fields["SynoToken"]);
+                await client.DownloadFileAsync(ChannelId, 34, target);
+                Equal("{\"success\":false}", await File.ReadAllTextAsync(target));
+                Equal(0, Directory.GetFiles(root, "*.part").Length); handler.AssertComplete();
+            }
+            finally { Directory.Delete(root, true); }
+        });
+        await RunAsync("Failed, interrupted and oversized downloads preserve existing files and clean partials", async () =>
+        {
+            var root = Path.Combine(Path.GetTempPath(), "tchat-download-error-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+            try
+            {
+                var handler = LoginHandler().ExpectRaw("SYNO.Chat.Post.File", "get", "{\"success\":false,\"error\":{\"code\":460}}")
+                    .ExpectFile(new byte[] { 1 }, declaredLength: SynologyChatClient.MaximumDownloadBytes + 1)
+                    .ExpectFile(new byte[] { 1 }, declaredLength: 10)
+                    .ExpectRaw("SYNO.Chat.Post.File", "get", "", HttpStatusCode.Found);
+                using var client = new SynologyChatClient(Server, handler); await client.LoginAsync("park", Password);
+                var restriction = 0; client.AccessRestricted += code => restriction = code;
+                var target = Path.Combine(root, "existing.txt"); await File.WriteAllTextAsync(target, "preserve");
+                await ThrowsAsync<SynologyApiException>(() => client.DownloadFileAsync(ChannelId, 33, target)); Equal(460, restriction);
+                await ThrowsAsync<SynologyApiException>(() => client.DownloadFileAsync(ChannelId, 33, target));
+                await ThrowsAsync<IOException>(() => client.DownloadFileAsync(ChannelId, 33, target));
+                await ThrowsAsync<SynologyApiException>(() => client.DownloadFileAsync(ChannelId, 33, target));
+                Equal("preserve", await File.ReadAllTextAsync(target)); Equal(0, Directory.GetFiles(root, "*.part").Length);
+                using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+                await ThrowsAsync<OperationCanceledException>(() => client.DownloadFileAsync(ChannelId, 33, target, cancelled.Token));
+                handler.AssertComplete();
+            }
+            finally { Directory.Delete(root, true); }
+        });
+        Run("Server filenames cannot escape the save dialog or use Windows device names", () =>
+        {
+            Equal("보고서.pdf", SynologyChatClient.SafeDownloadName("../../보고서.pdf"));
+            Equal("_CON.txt", SynologyChatClient.SafeDownloadName("CON.txt"));
+            Equal("첨부파일.bin", SynologyChatClient.SafeDownloadName(".."));
+        });
         await RunAsync("Direct conversation includes both users and encryption fields", async () =>
         {
             var handler = LoginHandler().Expect("SYNO.Chat.Channel.Anonymous", "initiate", new { success = true, data = new { channel_id = ChannelId } });
@@ -465,6 +512,7 @@ internal static class ApiTests
         ["SYNO.Chat.User"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 3, requestFormat = "JSON" },
         ["SYNO.Chat.Channel"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 5, requestFormat = "JSON" },
         ["SYNO.Chat.Post"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 5, requestFormat = "JSON" },
+        ["SYNO.Chat.Post.File"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 2, requestFormat = "JSON" },
         ["SYNO.Chat.Channel.Anonymous"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 2, requestFormat = "JSON" },
         ["SYNO.Chat.Admin.Setting"] = new { path = "entry.cgi", minVersion = 1, maxVersion = 5, requestFormat = "JSON" }
     } };
