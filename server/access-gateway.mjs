@@ -55,12 +55,32 @@ export function createAccessGateway({ snapshotPath = '/directory/identity.json',
           return send({ ok: true, members: members.size, ageSeconds: Math.floor((now() - snapshot.generatedAt) / 1000) });
         } catch { return send({ ok: false }, 503); }
       }
-      const chunks = []; let size = 0;
-      for await (const chunk of request) { size += chunk.length; if (size > 2097152) return error(400); chunks.push(chunk); }
-      const body = Buffer.concat(chunks);
       // This public host serves the native TChat API only, never DSM pages or encoded alternate routes.
       if (request.method !== 'POST' || !/^\/webapi\/[A-Za-z0-9_.-]+\.cgi$/.test(url.pathname)) return error(104);
-      const fields = new URLSearchParams(body.toString('utf8'));
+      const multipart = /^multipart\/form-data\s*;/i.test(request.headers['content-type'] || '');
+      const limit = multipart ? 10 * 1024 * 1024 + 65536 : 2097152;
+      if (Number(request.headers['content-length']) > limit) return error(400);
+      const chunks = []; let size = 0;
+      for await (const chunk of request) { size += chunk.length; if (size > limit) return error(400); chunks.push(chunk); }
+      const body = Buffer.concat(chunks);
+      let fields;
+      if (multipart) {
+        try {
+          const form = await new Request('http://gateway', { method: 'POST',
+            headers: { 'content-type': request.headers['content-type'] }, body }).formData();
+          fields = new URLSearchParams(); let fileCount = 0;
+          for (const [name, value] of form) {
+            if (typeof value === 'string') {
+              if (fields.has(name) || value.length > 16384) return error(400);
+              fields.set(name, value);
+            } else {
+              if (name !== 'file' || ++fileCount > 1 || value.size > 10 * 1024 * 1024) return error(400);
+            }
+          }
+          if (fileCount !== 1 || fields.get('api') !== 'SYNO.Chat.Post' || fields.get('method') !== 'create' ||
+              fields.get('type') !== '"file"') return error(400);
+        } catch { return error(400); }
+      } else fields = new URLSearchParams(body.toString('utf8'));
       const api = fields.get('api'); const method = fields.get('method');
       const call = () => forward({ upstream, path: request.url, method: 'POST', headers: request.headers, body });
       const resolveUser = async (user, sid) => {
@@ -145,7 +165,7 @@ export async function proxyRequest({ upstream, path, method, headers, body }) {
         resolve({ status: response.statusCode, headers: clean, body: Buffer.concat(chunks) });
       });
     });
-    request.setTimeout(15000, () => request.destroy(new Error('timeout')));
+    request.setTimeout(/^multipart\/form-data/i.test(headers['content-type'] || '') ? 300000 : 15000, () => request.destroy(new Error('timeout')));
     request.on('error', reject); request.end(body);
   });
 }

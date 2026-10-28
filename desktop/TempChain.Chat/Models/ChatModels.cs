@@ -13,4 +13,4 @@ public sealed record ChatConversation(long Id, string Name, string Kind,
 }
 
 public sealed record ChatMessage(long Id, long ChannelId, long UserId, string UserName,
-    string Text, DateTimeOffset SentAt, bool IsOwn, bool HasAttachments = false);
+    string Text, DateTimeOffset SentAt, bool IsOwn, bool HasAttachments = false, string FileName = "");

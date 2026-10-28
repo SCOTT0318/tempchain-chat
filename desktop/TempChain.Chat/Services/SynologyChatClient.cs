@@ -42,7 +42,7 @@ public sealed partial class SynologyChatClient : IDisposable
             throw new ArgumentException("올바른 HTTPS 서버 주소가 필요합니다.", nameof(serverUri));
         origin = new Uri(serverUri.GetLeftPart(UriPartial.Authority) + "/");
         http = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false })
-        { Timeout = TimeSpan.FromSeconds(15) };
+        { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     public async Task LoginAsync(string username, string password, CancellationToken ct = default)
@@ -209,9 +209,10 @@ public sealed partial class SynologyChatClient : IDisposable
                 ReadString(item, "username", "user_name", "nickname");
             if (string.IsNullOrWhiteSpace(userName)) userName = userId > 0 ? $"사용자 {userId}" : "시스템";
             var sentAt = ReadTimestamp(item);
-            var hasAttachments = ReadArray(item, "attachments", "files").Any();
+            var fileName = item.TryGetProperty("file_props", out var fileProps) ? ReadString(fileProps, "name") : "";
+            var hasAttachments = ReadArray(item, "attachments", "files").Any() || fileName.Length > 0 || ReadString(item, "type") == "file";
             result.Add(new ChatMessage(id, channelId, userId, userName,
-                text, sentAt, CurrentUser?.Id == userId, hasAttachments));
+                text, sentAt, CurrentUser?.Id == userId, hasAttachments, fileName));
         }
         return result.OrderBy(message => message.SentAt).ThenBy(message => message.Id).ToArray();
     }
@@ -323,7 +324,7 @@ public sealed partial class SynologyChatClient : IDisposable
     }
 
     private async Task<JsonElement> SendAsync(string api, string method, int requestedVersion,
-        Dictionary<string, object?> parameters, bool authenticated, CancellationToken ct)
+        Dictionary<string, object?> parameters, bool authenticated, CancellationToken ct, FileStream? file = null)
     {
         ThrowIfDisposed();
         ct.ThrowIfCancellationRequested();
@@ -352,21 +353,33 @@ public sealed partial class SynologyChatClient : IDisposable
             fields["_sid"] = sid!;
             if (!string.IsNullOrEmpty(synoToken)) fields["SynoToken"] = synoToken;
         }
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "webapi/" + path))
-        { Content = new FormUrlEncodedContent(fields) };
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(file is null ? 15 : 300));
+        var requestToken = timeout.Token;
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(origin, "webapi/" + path));
+        if (file is null) request.Content = new FormUrlEncodedContent(fields);
+        else
+        {
+            var multipart = new MultipartFormDataContent();
+            request.Content = multipart;
+            foreach (var pair in fields) multipart.Add(new StringContent(pair.Value), pair.Key);
+            var content = new StreamContent(file);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+            multipart.Add(content, "file", Path.GetFileName(file.Name));
+        }
         if (authenticated && !string.IsNullOrEmpty(synoToken)) request.Headers.TryAddWithoutValidation("X-SYNO-TOKEN", synoToken);
         try
         {
-            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken);
             if (!response.IsSuccessStatusCode)
                 throw new SynologyApiException((int)response.StatusCode, "서버가 요청을 처리하지 못했습니다.");
             if (response.Content.Headers.ContentLength > MaximumResponseBytes)
                 throw new SynologyApiException(0, "서버 응답이 허용 크기를 초과했습니다.");
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            await using var stream = await response.Content.ReadAsStreamAsync(requestToken);
             using var buffer = new MemoryStream();
             var chunk = new byte[16384];
             int count;
-            while ((count = await stream.ReadAsync(chunk.AsMemory(), ct)) != 0)
+            while ((count = await stream.ReadAsync(chunk.AsMemory(), requestToken)) != 0)
             {
                 if (buffer.Length + count > MaximumResponseBytes)
                     throw new SynologyApiException(0, "서버 응답이 허용 크기를 초과했습니다.");

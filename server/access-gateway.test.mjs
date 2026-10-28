@@ -4,12 +4,48 @@ import { once } from 'node:events';
 import { createAccessGateway, directoryMembers } from './access-gateway.mjs';
 
 const member = (account, groups = ['erp']) => ({ account, uid: 1001, description: '홍길동 | 사원', email: account + '@example.test', groups });
+function upload(sid = 'fixture-session', bytes = new Uint8Array([0, 255, 13, 10, 38, 128])) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries({ api: 'SYNO.Chat.Post', method: 'create', version: '5',
+    _sid: sid, type: '"file"', channel_id: '19', message: '""', is_thread: 'false', thread_id: '0' })) form.set(key, value);
+  form.set('file', new Blob([bytes]), '보고서 & 확인.xlsx');
+  return form;
+}
+
+test('multipart file uploads preserve binary content and require current ERP membership', async t => {
+  const state = await fixture(t);
+  await state.call({ api: 'SYNO.API.Auth', method: 'login', account: 'staff' });
+  assert.equal((await state.call(upload())).success, true);
+  const sent = state.lastForward;
+  const form = await new Request('http://fixture', { method: 'POST', headers: { 'content-type': sent.headers['content-type'] }, body: sent.body }).formData();
+  assert.equal(form.get('file').name, '보고서 & 확인.xlsx');
+  assert.deepEqual(new Uint8Array(await form.get('file').arrayBuffer()), new Uint8Array([0, 255, 13, 10, 38, 128]));
+  state.snapshot.users[0].groups = [];
+  const before = state.calls.length;
+  assert.equal((await state.call(upload())).error.code, 460);
+  assert.equal(state.calls.length, before);
+});
+
+test('multipart rejects missing sessions, duplicate routing, multiple files, wrong API and oversize files', async t => {
+  const state = await fixture(t);
+  const missing = upload(); missing.delete('_sid');
+  assert.equal((await state.call(missing)).error.code, 119);
+  const duplicate = upload(); duplicate.append('api', 'SYNO.API.Auth');
+  const wrong = upload(); wrong.set('api', 'SYNO.API.Auth');
+  const multiple = upload(); multiple.append('file', new Blob(['second']), 'second.txt');
+  const oversize = upload('fixture-session', new Uint8Array(10 * 1024 * 1024 + 1));
+  for (const form of [duplicate, wrong, multiple, oversize]) assert.equal((await state.call(form)).error.code, 400);
+  assert.equal(state.calls.length, 0);
+});
 async function fixture(t) {
   const now = Date.now();
   const state = { snapshot: { version: 1, generatedAt: now, users: [member('staff'), member('admin-only', ['administrators'])] }, calls: [] };
   const server = createAccessGateway({ now: () => now, readDirectory: async () => state.snapshot,
     forward: async request => {
-      const fields = new URLSearchParams(request.body.toString());
+      const fields = /^multipart\/form-data/i.test(request.headers['content-type'] || '')
+        ? await new Request('http://fixture', { method: 'POST', headers: { 'content-type': request.headers['content-type'] }, body: request.body }).formData()
+        : new URLSearchParams(request.body.toString());
+      state.lastForward = request;
       state.calls.push({ api: fields.get('api'), method: fields.get('method') });
       let body;
       if (fields.get('api') === 'SYNO.API.Auth') body = { success: true, data: { sid: 'fixture-session' } };
@@ -26,7 +62,7 @@ async function fixture(t) {
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); server.close(); });
   state.call = async (fields, path = '/webapi/entry.cgi') => (await fetch('http://127.0.0.1:' + server.address().port + path,
-    { method: 'POST', body: new URLSearchParams(fields) })).json();
+    { method: 'POST', body: fields instanceof FormData ? fields : new URLSearchParams(fields) })).json();
   return state;
 }
 

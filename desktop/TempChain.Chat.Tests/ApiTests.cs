@@ -132,6 +132,60 @@ internal static class ApiTests
             Equal(5, handler.Requests.Count);
             handler.AssertComplete();
         });
+        await RunAsync("File upload streams binary and Unicode filename with authenticated file post schema", async () =>
+        {
+            var root = Path.Combine(Path.GetTempPath(), "tchat-upload-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var path = Path.Combine(root, "한글 & 보고서.xlsx");
+                var bytes = new byte[] { 0, 255, 13, 10, 38, 61, 128 };
+                await File.WriteAllBytesAsync(path, bytes);
+                var handler = LoginHandler().Expect("SYNO.Chat.Post", "create", new { success = true, data = new { post_id = 33 } })
+                    .Expect("SYNO.Chat.Post", "create", new { success = true, data = new { post_id = 34 } });
+                using var client = new SynologyChatClient(Server, handler);
+                await client.LoginAsync("park", Password);
+                await client.SendFileAsync(ChannelId, path);
+                await client.SendFileAsync(ChannelId, path);
+                var fields = handler.Requests[^1].Fields;
+                Equal("file", JsonSerializer.Deserialize<string>(fields["type"]));
+                Equal("", JsonSerializer.Deserialize<string>(fields["message"]));
+                Equal(ChannelId, JsonSerializer.Deserialize<long>(fields["channel_id"]));
+                Equal(Path.GetFileName(path), fields["file_name"]);
+                Equal(Convert.ToBase64String(bytes), fields["file_base64"]);
+                Equal(Sid, fields["_sid"]); Equal(Token, fields["SynoToken"]);
+                Check(handler.Requests.All(request => request.Uri.Query == ""));
+                handler.AssertComplete();
+            }
+            finally { Directory.Delete(root, true); }
+        });
+        await RunAsync("Oversize, missing and encrypted file uploads never create posts", async () =>
+        {
+            var path = Path.Combine(Path.GetTempPath(), "tchat-limit-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                using (var file = File.Create(path)) file.SetLength(SynologyChatClient.MaximumFileBytes + 1);
+                var handler = LoginHandler().Expect("SYNO.Chat.Channel", "list", Channels());
+                using var client = new SynologyChatClient(Server, handler);
+                await client.LoginAsync("park", Password); await client.GetConversationsAsync();
+                await ThrowsAsync<SynologyApiException>(() => client.SendFileAsync(ChannelId, path));
+                await ThrowsAsync<IOException>(() => client.SendFileAsync(ChannelId, path + ".missing"));
+                await ThrowsAsync<SynologyApiException>(() => client.SendFileAsync(20, path));
+                handler.AssertComplete();
+            }
+            finally { File.Delete(path); }
+        });
+        await RunAsync("File posts display server file_props names even without attachments array", async () =>
+        {
+            var handler = LoginHandler().Expect("SYNO.Chat.Post", "list", new { success = true, data = new { posts = new[] {
+                new { post_id = 35, creator_id = 7, type = "file", message = "", file_props = new { name = "보고서.pdf" } }
+            } } });
+            using var client = new SynologyChatClient(Server, handler);
+            await client.LoginAsync("park", Password);
+            var message = (await client.GetMessagesAsync(ChannelId)).Single();
+            Check(message.HasAttachments); Equal("보고서.pdf", message.FileName);
+            handler.AssertComplete();
+        });
         await RunAsync("Direct conversation includes both users and encryption fields", async () =>
         {
             var handler = LoginHandler().Expect("SYNO.Chat.Channel.Anonymous", "initiate", new { success = true, data = new { channel_id = ChannelId } });

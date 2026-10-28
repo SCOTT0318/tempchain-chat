@@ -28,8 +28,22 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
-        var fields = ReadForm(body);
+        Dictionary<string, string> fields;
+        if (request.Content is MultipartFormDataContent multipart)
+        {
+            fields = new(StringComparer.Ordinal);
+            foreach (var part in multipart)
+            {
+                var name = part.Headers.ContentDisposition!.Name!.Trim('"');
+                if (name == "file")
+                {
+                    fields["file_name"] = part.Headers.ContentDisposition.FileNameStar ?? part.Headers.ContentDisposition.FileName!.Trim('"');
+                    fields["file_base64"] = Convert.ToBase64String(await part.ReadAsByteArrayAsync(cancellationToken));
+                }
+                else fields.Add(name, await part.ReadAsStringAsync(cancellationToken));
+            }
+        }
+        else fields = ReadForm(request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken));
         var captured = new CapturedRequest(request.Method, request.RequestUri!, fields);
         Requests.Add(captured);
         if (_steps.Count == 0)

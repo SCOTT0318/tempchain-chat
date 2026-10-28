@@ -47,6 +47,7 @@ public partial class MainWindow : Window
     public ObservableCollection<ConversationItem> Conversations { get; } = new();
     public ObservableCollection<ContactItem> Contacts { get; } = new();
     public ObservableCollection<MessageItem> Messages { get; } = new();
+    public ObservableCollection<PendingFile> PendingFiles { get; } = new();
 
     public MainWindow(SettingsStore store)
     {
@@ -118,7 +119,7 @@ public partial class MainWindow : Window
 
     private void InstallUpdate_Click(object sender, RoutedEventArgs e) => AppUpdateManager.Instance.InstallAndRestart();
     public void ShutdownForUpdate() { exitRequested = true; Application.Current.Shutdown(); }
-    public bool CanRestartForUpdate => !signingIn && !unlocking && !settingLockPassword && !sending && !openingConversation && !hidingConversation && !managingRoom && string.IsNullOrWhiteSpace(MessageInput.Text);
+    public bool CanRestartForUpdate => !signingIn && !unlocking && !settingLockPassword && !sending && !openingConversation && !hidingConversation && !managingRoom && PendingFiles.Count == 0 && string.IsNullOrWhiteSpace(MessageInput.Text);
 
     private async void Login_Click(object sender, RoutedEventArgs e) => await SignInAsync();
 
@@ -348,7 +349,7 @@ public partial class MainWindow : Window
         if (selectedChannelId == item.Id) return;
         selectedChannelId = item.Id;
         messagesChannelId = null;
-        Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear();
+        Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear(); PendingFiles.Clear();
         SetConversationHeader(item);
         MessageEmptyPanel.Visibility = Visibility.Visible;
         EmptyHeadingText.Text = "대화를 불러오는 중";
@@ -361,7 +362,8 @@ public partial class MainWindow : Window
         ChatTitleText.Text = item.Title;
         ChatDetailText.Text = item.Data.IsEncrypted ? "암호화 대화" : item.Data.MemberIds.Count > 0 ? $"참여자 {item.Data.MemberIds.Count}명" : "팀 대화";
         EncryptedNotice.Visibility = item.Data.IsEncrypted ? Visibility.Visible : Visibility.Collapsed;
-        MessageInput.IsEnabled = !item.Data.IsEncrypted;
+        MessageInput.IsEnabled = !item.Data.IsEncrypted && !sending;
+        AttachButton.IsEnabled = !item.Data.IsEncrypted && !sending;
         SendButton.IsEnabled = !item.Data.IsEncrypted && !sending;
         HideConversationButton.IsEnabled = !item.Data.IsSelf && !hidingConversation;
         StartDirectButton.Visibility = showingContacts ? Visibility.Visible : Visibility.Collapsed;
@@ -371,7 +373,8 @@ public partial class MainWindow : Window
     private void ClearSelection()
     {
         selectedChannelId = null; messagesChannelId = null;
-        Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear();
+        Messages.Clear(); seenMessageIds.Clear(); MessageInput.Clear(); PendingFiles.Clear();
+        AttachButton.IsEnabled = false;
         MessageInput.IsEnabled = false; SendButton.IsEnabled = false;
         HideConversationButton.IsEnabled = false;
         UpdateRoomActions();
@@ -428,6 +431,27 @@ public partial class MainWindow : Window
     }
 
     private async void Send_Click(object sender, RoutedEventArgs e) => await SendAsync();
+    private void Attach_Click(object sender, RoutedEventArgs e)
+    {
+        if (sending || client is null || selectedChannelId is null || !MessageInput.IsEnabled) return;
+        var picker = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Title = "보낼 파일 선택 (파일당 10MB, 최대 20개)", CheckFileExists = true };
+        if (picker.ShowDialog(this) != true) return;
+        var paths = picker.FileNames.Where(path => !PendingFiles.Any(file => string.Equals(file.Path, path, StringComparison.OrdinalIgnoreCase))).ToArray();
+        if (PendingFiles.Count + paths.Length > SynologyChatClient.MaximumFilesPerBatch)
+        { StatusText.Text = "파일은 한 번에 최대 20개까지 선택할 수 있습니다."; return; }
+        try
+        {
+            foreach (var path in paths) SynologyChatClient.ValidateUploadFile(path);
+            foreach (var path in paths) PendingFiles.Add(new PendingFile(path));
+            StatusText.Text = $"파일 {PendingFiles.Count}개 선택 · 보내기를 누르면 전송합니다.";
+        }
+        catch (Exception ex) { StatusText.Text = ex is IOException ? ex.Message : FriendlyError(ex); }
+    }
+    private void RemoveFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (!sending && sender is Button { Tag: PendingFile file }) PendingFiles.Remove(file);
+    }
+
     private async Task SendAsync()
     {
         var active = client;
@@ -435,33 +459,55 @@ public partial class MainWindow : Window
         var generation = sessionGeneration;
         var channelId = selectedChannelId;
         var text = MessageInput.Text.Trim();
-        if (active is null || channelId is null || sending || string.IsNullOrEmpty(text)) return;
+        var files = PendingFiles.ToArray();
+        if (active is null || channelId is null || sending || (string.IsNullOrEmpty(text) && files.Length == 0)) return;
         if (Conversations.FirstOrDefault(item => item.Id == channelId)?.Data.IsEncrypted != false) return;
         if (text.Length > 4000) { StatusText.Text = "메시지는 4,000자 이내로 입력해 주세요."; return; }
-        sending = true; SendButton.IsEnabled = false;
+        try { foreach (var file in files) SynologyChatClient.ValidateUploadFile(file.Path); }
+        catch (Exception ex) { StatusText.Text = ex is IOException ? ex.Message : FriendlyError(ex); return; }
+        sending = true; SendButton.IsEnabled = AttachButton.IsEnabled = MessageInput.IsEnabled = false;
         var entered = false;
+        var sentFiles = 0;
         try
         {
             await refreshGate.WaitAsync(token);
             entered = true;
             if (active != client || generation != sessionGeneration) return;
-            await active.SendMessageAsync(channelId.Value, text, token);
+            if (text.Length > 0)
+            {
+                await active.SendMessageAsync(channelId.Value, text, token);
+                if (active == client && generation == sessionGeneration && selectedChannelId == channelId && MessageInput.Text.Trim() == text) MessageInput.Clear();
+            }
+            foreach (var file in files)
+            {
+                token.ThrowIfCancellationRequested();
+                StatusText.Text = $"파일 전송 중 {sentFiles + 1}/{files.Length} · {file.Name}";
+                await active.SendFileAsync(channelId.Value, file.Path, token);
+                sentFiles++;
+                if (active != client || generation != sessionGeneration) return;
+                if (selectedChannelId == channelId) PendingFiles.Remove(file);
+            }
             refreshGate.Release();
             entered = false;
             if (active != client || generation != sessionGeneration) return;
-            if (selectedChannelId == channelId && MessageInput.Text.Trim() == text) MessageInput.Clear();
-            StatusText.Text = "메시지를 보냈습니다";
+            StatusText.Text = files.Length > 0 ? $"파일 {sentFiles}개를 보냈습니다." : "메시지를 보냈습니다";
             await RefreshChatAsync(false, waitForGate: true);
             if (selectedChannelId == channelId) _ = Dispatcher.BeginInvoke(MessagesScroll.ScrollToEnd);
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { if (active == client) StatusText.Text = FriendlyError(ex); }
+        catch (Exception ex)
+        {
+            if (active == client && generation == sessionGeneration)
+                StatusText.Text = files.Length > 0
+                    ? $"파일 {sentFiles}/{files.Length}개 전송 완료. {FriendlyError(ex)} 다시 보내기 전에 대화 기록을 확인해 주세요."
+                    : FriendlyError(ex);
+        }
         finally
         {
             if (entered) refreshGate.Release();
             sending = false;
             if (client is not null && selectedChannelId is not null)
-                SendButton.IsEnabled = Conversations.FirstOrDefault(item => item.Id == selectedChannelId)?.Data.IsEncrypted == false;
+                SendButton.IsEnabled = AttachButton.IsEnabled = MessageInput.IsEnabled = Conversations.FirstOrDefault(item => item.Id == selectedChannelId)?.Data.IsEncrypted == false;
         }
     }
 
@@ -792,5 +838,11 @@ public sealed class MessageItem
     public string Time => Message.SentAt.ToLocalTime().ToString("tt h:mm");
     public string FullTime => Message.SentAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
     public Visibility AttachmentVisibility => Message.HasAttachments ? Visibility.Visible : Visibility.Collapsed;
+    public string AttachmentLabel => string.IsNullOrWhiteSpace(Message.FileName) ? "첨부파일" : "📎 " + Message.FileName;
     public MessageItem(ChatMessage message) => Message = message;
+}
+
+public sealed record PendingFile(string Path)
+{
+    public string Name => System.IO.Path.GetFileName(Path);
 }
