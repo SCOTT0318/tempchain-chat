@@ -62,6 +62,7 @@ public partial class MainWindow : Window
             MatchesSearch(((ContactItem)item).Title) || MatchesSearch(((ContactItem)item).Subtitle);
         ConfigureConversationMenu();
         ConfigureRoomMenu();
+        ClearSelection();
         try { Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/app.ico")); }
         catch (IOException) { }
         CreateTray();
@@ -339,8 +340,7 @@ public partial class MainWindow : Window
         }
         messagesChannelId = channelId;
         MessageEmptyPanel.Visibility = Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        EmptyHeadingText.Text = "메시지 없음";
-        EmptyDetailText.Text = "";
+        ShowConversationPlaceholder(false);
     }
 
     private async void ConversationsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -354,13 +354,15 @@ public partial class MainWindow : Window
         FileSelectionNotice.Visibility = Visibility.Collapsed;
         SetConversationHeader(item);
         MessageEmptyPanel.Visibility = Visibility.Visible;
-        EmptyHeadingText.Text = "대화를 불러오는 중";
-        EmptyDetailText.Text = "";
+        ShowConversationPlaceholder(true);
         await RefreshChatAsync(false, waitForGate: true);
     }
 
     private void SetConversationHeader(ConversationItem item)
     {
+        ChatHeader.Visibility = Visibility.Visible;
+        ComposerPanel.Visibility = item.Data.IsEncrypted ? Visibility.Collapsed : Visibility.Visible;
+        EmptyActionButton.Visibility = Visibility.Collapsed;
         ChatTitleText.Text = item.Title;
         ChatDetailText.Text = item.Data.IsEncrypted ? "암호화 대화" : item.Data.MemberIds.Count > 0 ? $"참여자 {item.Data.MemberIds.Count}명" : "팀 대화";
         EncryptedNotice.Visibility = item.Data.IsEncrypted ? Visibility.Visible : Visibility.Collapsed;
@@ -368,7 +370,7 @@ public partial class MainWindow : Window
         AttachButton.IsEnabled = !item.Data.IsEncrypted && !sending;
         SendButton.IsEnabled = !item.Data.IsEncrypted && !sending;
         HideConversationButton.IsEnabled = !item.Data.IsSelf && !hidingConversation;
-        StartDirectButton.Visibility = showingContacts ? Visibility.Visible : Visibility.Collapsed;
+        StartDirectButton.Visibility = showingContacts && ContactsList.SelectedItem is ContactItem ? Visibility.Visible : Visibility.Collapsed;
         UpdateRoomActions();
     }
 
@@ -382,11 +384,55 @@ public partial class MainWindow : Window
         HideConversationButton.IsEnabled = false;
         UpdateRoomActions();
         EncryptedNotice.Visibility = Visibility.Collapsed;
+        ChatHeader.Visibility = ComposerPanel.Visibility = Visibility.Collapsed;
         ChatTitleText.Text = "대화";
         ChatDetailText.Text = "";
+        StatusText.Text = "";
         MessageEmptyPanel.Visibility = Visibility.Visible;
-        EmptyHeadingText.Text = "";
-        EmptyDetailText.Text = "";
+        ShowUnselectedState();
+    }
+
+    private void ShowUnselectedState()
+    {
+        if (selectedChannelId is not null) return;
+        EmptyLoadingBar.Visibility = Visibility.Collapsed;
+        EmptyActionButton.Visibility = Visibility.Visible;
+        EmptyStateIcon.Text = showingContacts ? "\uE716" : "\uE8F2";
+        if (showingContacts && ContactsList.SelectedItem is ContactItem contact)
+        {
+            EmptyHeadingText.Text = contact.Title;
+            EmptyDetailText.Text = "선택한 동료와 일대일 대화를 시작하세요.";
+            EmptyActionButton.Content = "대화 시작";
+        }
+        else
+        {
+            EmptyHeadingText.Text = showingContacts ? "함께 일할 동료를 찾아보세요" : "대화를 선택해 주세요";
+            EmptyDetailText.Text = showingContacts ? "왼쪽 연락처에서 동료를 선택하면\n새 대화를 시작할 수 있습니다." : "왼쪽 목록에서 대화를 선택하거나\n연락처에서 동료와 새 대화를 시작하세요.";
+            EmptyActionButton.Content = showingContacts ? "이름으로 검색" : "연락처 보기";
+        }
+    }
+
+    private void ShowConversationPlaceholder(bool loading)
+    {
+        EmptyStateIcon.Text = loading ? "\uE895" : "\uE8F2";
+        EmptyActionButton.Visibility = Visibility.Collapsed;
+        EmptyLoadingBar.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+        EmptyHeadingText.Text = loading ? "대화를 불러오는 중" : "첫 메시지를 남겨보세요";
+        EmptyDetailText.Text = loading ? "잠시만 기다려 주세요." : "아래 입력창에서 대화를 시작할 수 있습니다.";
+    }
+
+    private void ContactsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        StartDirectButton.Visibility = showingContacts && ContactsList.SelectedItem is ContactItem ? Visibility.Visible : Visibility.Collapsed;
+        ShowUnselectedState();
+    }
+
+    private async void EmptyAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (!showingContacts) Contacts_Click(sender, e);
+        else if (ContactsList.SelectedItem is ContactItem) await OpenSelectedContactAsync();
+        else DirectorySearch.Focus();
     }
 
     private async void HideConversation_Click(object sender, RoutedEventArgs e)
@@ -571,7 +617,7 @@ public partial class MainWindow : Window
         var generation = sessionGeneration;
         var token = sessionCancellation.Token;
         var entered = false;
-        openingConversation = true; StartDirectButton.IsEnabled = false;
+        openingConversation = true; StartDirectButton.IsEnabled = EmptyActionButton.IsEnabled = false;
         try
         {
             StatusText.Text = "대화를 준비하는 중";
@@ -593,7 +639,7 @@ public partial class MainWindow : Window
         finally
         {
             if (entered) refreshGate.Release();
-            openingConversation = false; StartDirectButton.IsEnabled = true;
+            openingConversation = false; StartDirectButton.IsEnabled = EmptyActionButton.IsEnabled = true;
         }
     }
 
@@ -603,14 +649,16 @@ public partial class MainWindow : Window
         ConversationsList.Visibility = Visibility.Visible; ContactsList.Visibility = Visibility.Collapsed;
         DirectoryTitle.Text = "대화"; StartDirectButton.Visibility = Visibility.Collapsed;
         DirectorySearch.Clear(); UpdateDirectoryEmpty();
+        ShowUnselectedState();
     }
 
     private void Contacts_Click(object sender, RoutedEventArgs e)
     {
         showingContacts = true;
         ConversationsList.Visibility = Visibility.Collapsed; ContactsList.Visibility = Visibility.Visible;
-        DirectoryTitle.Text = "연락처"; StartDirectButton.Visibility = Visibility.Visible;
+        DirectoryTitle.Text = "연락처"; StartDirectButton.Visibility = ContactsList.SelectedItem is ContactItem ? Visibility.Visible : Visibility.Collapsed;
         DirectorySearch.Clear(); UpdateDirectoryEmpty();
+        ShowUnselectedState();
     }
 
     private bool MatchesSearch(string name) => string.IsNullOrWhiteSpace(DirectorySearch?.Text) ||
