@@ -1,9 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { readFile } from 'node:fs/promises';
 import { createAccessGateway, directoryMembers } from './access-gateway.mjs';
 
 const member = (account, groups = ['erp']) => ({ account, uid: 1001, description: '홍길동 | 사원', email: account + '@example.test', groups });
+test('deployment compose includes tested gateway and inline startup with healthcheck and bounded logs', async () => {
+  const compose = (await readFile(new URL('./compose.access.yaml', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+  const source = (await readFile(new URL('./access-gateway.mjs', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+  const start = compose.indexOf('        import ');
+  const end = compose.indexOf('    healthcheck:', start);
+  assert.ok(start > 0 && end > start);
+  const inline = compose.slice(start, end).split('\n').map(line => line.startsWith('        ') ? line.slice(8) : line).join('\n').trimEnd();
+  assert.equal(inline, source.trimEnd() + '\ncreateAccessGateway().listen(8080,"0.0.0.0");');
+  assert.ok(compose.includes('max-size: "3m", max-file: "2"'));
+});
 function upload(sid = 'fixture-session', bytes = new Uint8Array([0, 255, 13, 10, 38, 128])) {
   const form = new FormData();
   for (const [key, value] of Object.entries({ api: 'SYNO.Chat.Post', method: 'create', version: '5',

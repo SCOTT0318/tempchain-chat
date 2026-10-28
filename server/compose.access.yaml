@@ -193,3 +193,12 @@ services:
           createAccessGateway({ snapshotPath: process.env.DIRECTORY_PATH || '/directory/identity.json',
             upstream: process.env.CHAT_UPSTREAM || 'http://192.168.0.7:3000' }).listen(8080, '0.0.0.0');
         }
+        createAccessGateway().listen(8080,"0.0.0.0");
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: "3m", max-file: "2"}
